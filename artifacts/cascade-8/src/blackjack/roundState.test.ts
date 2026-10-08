@@ -6,9 +6,11 @@ import {
 } from "./blackjackCore";
 import {
   canDoubleBlackjackHand,
+  canSplitBlackjackHand,
   doubleBlackjackHand,
   getBlackjackRoundReadiness,
   hitBlackjackHand,
+  splitBlackjackHand,
   standBlackjackHand,
   startBlackjackRound,
 } from "./roundState";
@@ -120,6 +122,7 @@ describe("blackjack initial deal", () => {
     ]);
 
     expect(result.round.hands[0]).toMatchObject({
+      handId: "seat-1-hand-0",
       seatId: 1,
       wager: 50,
       status: "blackjack",
@@ -127,11 +130,13 @@ describe("blackjack initial deal", () => {
       result: null,
     });
     expect(result.round.hands[1]).toMatchObject({
+      handId: "seat-3-hand-0",
       seatId: 3,
       wager: 100,
       status: "playing",
       doubled: false,
     });
+    expect(result.round.activeHandId).toBe("seat-3-hand-0");
     expect(result.round.activeSeatId).toBe(3);
     expect(result.round.phase).toBe("playerTurns");
     expect(result.round.dealer.blackjack).toBe(false);
@@ -154,6 +159,7 @@ describe("blackjack initial deal", () => {
     const result = startBlackjackRound(state, shoeWith(cards), 10);
 
     expect(result.round.dealer.blackjack).toBe(true);
+    expect(result.round.activeHandId).toBeNull();
     expect(result.round.activeSeatId).toBeNull();
     expect(result.round.phase).toBe("complete");
     expect(result.round.hands.every((hand) => hand.result === "lose")).toBe(true);
@@ -407,5 +413,131 @@ describe("blackjack double down", () => {
     });
     expect(doubled.round.activeSeatId).toBe(3);
     expect(doubled.round.phase).toBe("playerTurns");
+  });
+});
+
+describe("blackjack split base", () => {
+  it("allows equal blackjack values such as 10 + K and creates two independent hands", () => {
+    const cards = [
+      card("10", 0),
+      card("6", 1, "hearts"),
+      card("K", 2, "clubs"),
+      card("10", 3, "diamonds"),
+      card("2", 4, "hearts"),
+      card("3", 5, "clubs"),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+
+    expect(canSplitBlackjackHand(started.round)).toBe(true);
+
+    const split = splitBlackjackHand(started.round, started.shoe);
+    expect(split.round.hands).toHaveLength(2);
+    expect(split.round.hands[0]).toMatchObject({
+      handId: "seat-1-hand-0",
+      seatId: 1,
+      handIndex: 0,
+      splitDepth: 1,
+      wager: 50,
+      status: "playing",
+    });
+    expect(split.round.hands[1]).toMatchObject({
+      handId: "seat-1-hand-1",
+      seatId: 1,
+      handIndex: 1,
+      splitDepth: 1,
+      wager: 50,
+      status: "playing",
+    });
+    expect(split.round.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["10", "2"]);
+    expect(split.round.hands[1]?.cards.map((candidate) => candidate.rank)).toEqual(["K", "3"]);
+    expect(split.round.activeHandId).toBe("seat-1-hand-0");
+    expect(split.round.activeSeatId).toBe(1);
+    expect(split.shoe.nextIndex).toBe(6);
+  });
+
+  it("moves from hand 1 to hand 2 within the same seat before leaving that seat", () => {
+    const cards = [
+      card("8", 0),
+      card("10", 1),
+      card("8", 2, "hearts"),
+      card("7", 3),
+      card("2", 4),
+      card("3", 5),
+      card("10", 6),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const split = splitBlackjackHand(started.round, started.shoe);
+    const firstStand = standBlackjackHand(split.round, split.shoe);
+
+    expect(firstStand.round.phase).toBe("playerTurns");
+    expect(firstStand.round.activeSeatId).toBe(1);
+    expect(firstStand.round.activeHandId).toBe("seat-1-hand-1");
+    expect(firstStand.round.hands[0]?.status).toBe("stood");
+    expect(firstStand.round.hands[1]?.status).toBe("playing");
+
+    const secondStand = standBlackjackHand(firstStand.round, firstStand.shoe);
+    expect(secondStand.round.phase).toBe("complete");
+    expect(secondStand.round.activeHandId).toBeNull();
+  });
+
+  it("does not treat a split two-card 21 as natural blackjack", () => {
+    const cards = [
+      card("10", 0),
+      card("9", 1),
+      card("K", 2, "hearts"),
+      card("7", 3),
+      card("A", 4),
+      card("A", 5, "hearts"),
+      card("10", 6, "clubs"),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const split = splitBlackjackHand(started.round, started.shoe);
+
+    expect(split.round.phase).toBe("complete");
+    expect(split.round.hands).toHaveLength(2);
+    expect(split.round.hands.every((hand) => hand.status === "stood")).toBe(true);
+    expect(split.round.hands.every((hand) => hand.result === "win")).toBe(true);
+    expect(split.round.hands.every((hand) => hand.returnAmount === 100)).toBe(true);
+  });
+
+  it("disables resplit and double-after-split in Part 8A", () => {
+    const cards = [
+      card("8", 0),
+      card("10", 1),
+      card("8", 2, "hearts"),
+      card("7", 3),
+      card("8", 4, "clubs"),
+      card("3", 5),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const split = splitBlackjackHand(started.round, started.shoe);
+
+    expect(split.round.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["8", "8"]);
+    expect(canSplitBlackjackHand(split.round)).toBe(false);
+    expect(canDoubleBlackjackHand(split.round)).toBe(false);
+  });
+
+  it("does not allow split after HIT or for unequal values", () => {
+    const unequalCards = [
+      card("8", 0),
+      card("10", 1),
+      card("7", 2),
+      card("7", 3),
+      card("2", 4),
+    ];
+    const unequal = startBlackjackRound(onlySeatOne(), shoeWith(unequalCards), 10);
+    expect(canSplitBlackjackHand(unequal.round)).toBe(false);
+
+    const pairCards = [
+      card("5", 0),
+      card("10", 1),
+      card("5", 2),
+      card("7", 3),
+      card("2", 4),
+    ];
+    const pair = startBlackjackRound(onlySeatOne(), shoeWith(pairCards), 10);
+    expect(canSplitBlackjackHand(pair.round)).toBe(true);
+    const hit = hitBlackjackHand(pair.round, pair.shoe);
+    expect(canSplitBlackjackHand(hit.round)).toBe(false);
   });
 });
