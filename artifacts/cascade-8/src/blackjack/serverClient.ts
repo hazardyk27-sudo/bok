@@ -51,6 +51,7 @@ export class BlackjackServerClient {
   private snapshot: BlackjackServerSnapshot | null = null;
   private readonly listeners = new Set<BlackjackServerClientListener>();
   private queue: Promise<unknown> = Promise.resolve();
+  private requiresResync = false;
 
   constructor(
     private readonly transport: BlackjackServerTransport = browserTransport,
@@ -69,6 +70,7 @@ export class BlackjackServerClient {
   async connect(): Promise<BlackjackServerSnapshot> {
     const snapshot = await this.transport.fetchState();
     this.acceptSnapshot(snapshot);
+    this.requiresResync = false;
     return this.snapshot ?? snapshot;
   }
 
@@ -81,7 +83,9 @@ export class BlackjackServerClient {
     seats?: BlackjackDealSeat[],
   ): Promise<BlackjackServerSnapshot> {
     const operation = async () => {
-      const current = this.snapshot ?? await this.connect();
+      const current = this.snapshot === null || this.requiresResync
+        ? await this.connect()
+        : this.snapshot;
       const request: BlackjackServerActionRequest = {
         expectedRevision: current.revision,
         idempotencyKey: this.transport.createIdempotencyKey(),
@@ -92,7 +96,8 @@ export class BlackjackServerClient {
       try {
         const snapshot = await this.transport.sendAction(request);
         this.acceptSnapshot(snapshot);
-        return snapshot;
+        this.requiresResync = false;
+        return this.snapshot ?? snapshot;
       } catch (error) {
         if (
           error instanceof BlackjackServerApiError &&
@@ -100,8 +105,13 @@ export class BlackjackServerClient {
         ) {
           const latest = error.snapshot ?? await this.transport.fetchState();
           this.acceptSnapshot(latest);
-          throw new BlackjackStaleActionError(latest);
+          this.requiresResync = false;
+          throw new BlackjackStaleActionError(this.snapshot ?? latest);
         }
+
+        // Any non-authoritative failure leaves the request outcome potentially
+        // ambiguous. Before another money-moving action, force a GET resync.
+        this.requiresResync = true;
         throw error;
       }
     };
