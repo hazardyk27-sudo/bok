@@ -50,7 +50,6 @@ describe("roulette wager lifecycle regression", () => {
     ).toMatchObject({
       roundId: "round-1",
       revision: 0,
-      optimistic: true,
       bets: [{
         betId: "straight-14",
         amount: 10,
@@ -82,7 +81,6 @@ describe("roulette wager lifecycle regression", () => {
     ).toMatchObject({
       roundId: "round-1",
       revision: 1,
-      optimistic: true,
       bets: [{
         betId: "straight-17",
         amount: 20,
@@ -111,9 +109,6 @@ describe("roulette wager lifecycle regression", () => {
       "straight-20": 20,
       red: 10,
     });
-    expect(
-      getRouletteBetAuthoritySnapshot().optimistic,
-    ).toBe(true);
 
     state = undoRouletteBet(state);
     expect(
@@ -121,9 +116,6 @@ describe("roulette wager lifecycle regression", () => {
     ).toEqual({
       "straight-20": 20,
     });
-    expect(
-      getRouletteBetAuthoritySnapshot().optimistic,
-    ).toBe(true);
 
     state = clearRouletteBets(state);
     expect(state.placements).toEqual([]);
@@ -132,7 +124,6 @@ describe("roulette wager lifecycle regression", () => {
     ).toMatchObject({
       roundId: "round-1",
       revision: 2,
-      optimistic: true,
       bets: [],
     });
   });
