@@ -116,39 +116,6 @@ export function leaveSeat(
   };
 }
 
-export function setSeatBet(
-  state: BlackjackSeatState,
-  seatId: BlackjackSeatId,
-  bet: number,
-  tableMin: number,
-): BlackjackSeatState {
-  const normalizedBet = Math.max(0, Math.floor(bet));
-  const seat = getSeat(state, seatId);
-
-  if (seat.status === "empty") {
-    return state;
-  }
-
-  return {
-    ...state,
-    seats: state.seats.map((candidate) => {
-      if (candidate.id !== seatId) {
-        return candidate;
-      }
-
-      const status: BlackjackSeatStatus =
-        normalizedBet >= tableMin ? "betReady" : "seated";
-
-      return {
-        ...candidate,
-        bet: normalizedBet,
-        chips: normalizedBet > 0 ? [normalizedBet as BlackjackChipValue] : [],
-        status,
-      };
-    }),
-  };
-}
-
 export function addSeatChip(
   state: BlackjackSeatState,
   seatId: BlackjackSeatId,
@@ -160,7 +127,8 @@ export function addSeatChip(
     return state;
   }
 
-  const nextBet = seat.bet + chip;
+  const chips = [...seat.chips, chip];
+  const nextBet = chips.reduce((total, value) => total + value, 0);
 
   return {
     ...state,
@@ -169,7 +137,7 @@ export function addSeatChip(
         ? {
             ...candidate,
             bet: nextBet,
-            chips: [...candidate.chips, chip],
+            chips,
             status: nextBet >= tableMin ? "betReady" : "seated",
           }
         : candidate,
