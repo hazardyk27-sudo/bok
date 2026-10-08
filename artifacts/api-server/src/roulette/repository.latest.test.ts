@@ -144,6 +144,35 @@ describe("roulette latest wager write", () => {
     ).toBe(true);
   });
 
+  it("does not create a new revision for equal stake and equal aggregate topology", async () => {
+    const current = {
+      globalBet: {
+        revision: 7,
+        stakeCents: 8_000,
+        bets: [
+          { betId: "straight-8", amount: 40 },
+          { betId: "straight-8", amount: 40 },
+        ],
+      },
+      balanceCents: 92_000,
+    };
+    mocks.getBet.mockResolvedValue(current);
+
+    const repository = new RouletteRepository();
+    const result = await repository.updateGlobalBetLatest(
+      "session-1",
+      {
+        roundId: "round-1",
+        bets: [{ betId: "straight-8", amount: 80 }],
+        idempotencyKey: "roulette_fast_double_equal_same",
+        requestReceivedAtMs: 12_345,
+      },
+    );
+
+    expect(result).toBe(current);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
   it("applies an equal-stake latest plan when the wager topology changed", async () => {
     mocks.getBet.mockResolvedValue({
       globalBet: {
