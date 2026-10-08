@@ -1,0 +1,728 @@
+/* Blackjack Part 13 — final visual-polish overrides.
+   Visual-only layer: no game-state, payout, shoe, wallet, or action semantics live here. */
+
+/* Desktop / shared composition */
+.bj-root {
+  --bj-gold: #e9c476;
+  --bj-gold-soft: #a77a39;
+  --bj-cream: #f4ead2;
+  --bj-felt: #07573a;
+  --bj-felt-dark: #032f21;
+  --bj-panel: rgba(7, 11, 10, 0.95);
+  --bj-panel-line: rgba(230, 194, 119, 0.28);
+  background:
+    radial-gradient(ellipse at 50% -9%, rgba(215, 163, 75, 0.23), transparent 27%),
+    radial-gradient(ellipse at 15% 26%, rgba(34, 94, 61, 0.11), transparent 23%),
+    radial-gradient(ellipse at 85% 26%, rgba(34, 94, 61, 0.11), transparent 23%),
+    linear-gradient(180deg, #13120f 0%, #0a0c0a 43%, #030504 100%);
+}
+
+.bj-casino-backdrop {
+  opacity: 0.82;
+}
+
+.bj-hud {
+  top: 16px;
+  border-color: rgba(230, 194, 119, 0.24);
+  border-radius: 13px;
+  background:
+    linear-gradient(180deg, rgba(14, 17, 15, 0.96), rgba(5, 8, 7, 0.95));
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.38),
+    inset 0 1px rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(12px);
+}
+
+.bj-hud--bankroll {
+  left: 18px;
+  width: min(404px, 27vw);
+  min-width: 350px;
+  padding: 15px 17px 12px;
+}
+
+.bj-hud__pair {
+  padding-bottom: 10px;
+}
+
+.bj-hud__pair:nth-child(2) {
+  padding-left: 20px;
+  border-left-color: rgba(255, 255, 255, 0.11);
+}
+
+.bj-hud__pair > span,
+.bj-hud__min > span,
+.bj-hud--status > span {
+  color: rgba(229, 232, 226, 0.65);
+  font-size: 11px;
+  font-weight: 720;
+  letter-spacing: 0.085em;
+}
+
+.bj-hud__pair strong {
+  margin-top: 3px;
+  color: #f0ca78;
+  font-size: clamp(23px, 1.75vw, 31px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.bj-hud__min {
+  gap: 10px;
+  padding-top: 9px;
+  border-top-color: rgba(255, 255, 255, 0.09);
+}
+
+.bj-hud__min strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
+}
+
+.bj-hud--status {
+  right: 18px;
+  min-width: 278px;
+  max-width: 350px;
+  padding: 14px 17px 13px;
+}
+
+.bj-hud--status strong {
+  margin-top: 1px;
+  color: #38e99a;
+  font-size: clamp(16px, 1.25vw, 21px);
+  font-weight: 850;
+}
+
+.bj-hud--status small {
+  margin-top: 4px;
+  color: rgba(222, 226, 220, 0.66);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.bj-deal-round {
+  margin-top: 8px;
+  min-width: 156px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border-color: rgba(43, 235, 147, 0.7);
+  background: linear-gradient(180deg, #098957, #055737);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.09),
+    0 0 16px rgba(24, 218, 130, 0.12);
+}
+
+.bj-dealer-zone {
+  height: 38.5%;
+}
+
+.bj-dealer-figure {
+  bottom: -0.5%;
+  width: clamp(205px, 17.8vw, 300px);
+  height: clamp(225px, 29.5vh, 342px);
+  filter:
+    drop-shadow(0 18px 19px rgba(0, 0, 0, 0.42))
+    saturate(0.92);
+}
+
+.bj-dealer-figure__torso {
+  background: #f2f0ea;
+}
+
+.bj-dealer-figure__vest {
+  background: linear-gradient(105deg, #111613, #27302b 54%, #0b0f0d);
+}
+
+.bj-chip-rack {
+  left: 17%;
+  bottom: 7.5%;
+  width: 17%;
+  min-width: 210px;
+  height: 44px;
+  border-color: rgba(230, 194, 119, 0.38);
+  background: rgba(10, 12, 10, 0.87);
+}
+
+.bj-rack-chip {
+  width: 31px;
+  height: 31px;
+}
+
+.bj-discard {
+  bottom: 7.5%;
+  opacity: 0.84;
+}
+
+.bj-shoe {
+  right: 5.2%;
+  bottom: 7.5%;
+  width: 108px;
+  height: 72px;
+  border-color: rgba(230, 194, 119, 0.48);
+  background: linear-gradient(145deg, #151a17, #050706 68%);
+}
+
+.bj-table-shell {
+  left: 1.4%;
+  right: 1.4%;
+  top: 24.2%;
+  bottom: 11.2%;
+  filter: drop-shadow(0 30px 42px rgba(0, 0, 0, 0.62));
+}
+
+.bj-rail--outer {
+  background:
+    radial-gradient(ellipse at 50% 8%, rgba(255, 255, 255, 0.045), transparent 48%),
+    linear-gradient(180deg, #211d19 0%, #0e0d0c 22%, #181411 62%, #080807 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(230, 194, 119, 0.58),
+    inset 0 10px 16px rgba(255, 255, 255, 0.035),
+    inset 0 -16px 28px rgba(0, 0, 0, 0.68),
+    0 0 0 1px rgba(0, 0, 0, 0.85);
+}
+
+.bj-rail--inner {
+  inset: 16px 14px 24px;
+  border: 1px solid rgba(230, 194, 119, 0.66);
+  background: #0d0d0c;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 5px 12px rgba(0, 0, 0, 0.32);
+}
+
+.bj-felt {
+  inset: 29px 27px 41px;
+  border-color: rgba(230, 194, 119, 0.32);
+  background:
+    radial-gradient(ellipse at 50% 39%, rgba(30, 145, 91, 0.23), transparent 42%),
+    radial-gradient(ellipse at 50% 112%, rgba(0, 0, 0, 0.38), transparent 56%),
+    repeating-radial-gradient(circle at 31% 36%, rgba(255, 255, 255, 0.011) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #07583a 0%, #05482f 45%, #033823 100%);
+  box-shadow:
+    inset 0 14px 30px rgba(255, 255, 255, 0.018),
+    inset 0 -34px 55px rgba(0, 0, 0, 0.27);
+}
+
+.bj-dealer-hand {
+  top: 4.6%;
+}
+
+.bj-dealer-hand__label {
+  margin-bottom: 5px;
+  color: #e9c476;
+  font-size: clamp(14px, 1.15vw, 19px);
+  letter-spacing: 0.15em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.bj-dealer-hand__cards {
+  gap: 2px;
+}
+
+.bj-card {
+  width: clamp(45px, 3.45vw, 58px);
+  border-radius: 5px;
+  background: linear-gradient(145deg, #fffefb, #ece9e2);
+  box-shadow:
+    0 7px 10px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.68);
+}
+
+.bj-card__rank {
+  font-weight: 850;
+}
+
+.bj-dealer-hand__total,
+.bj-seat__total {
+  border-color: rgba(230, 194, 119, 0.28);
+  background: rgba(7, 10, 9, 0.94);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.38);
+}
+
+.bj-table-copy {
+  top: 32.5%;
+  width: 58%;
+  color: rgba(233, 196, 118, 0.77);
+  letter-spacing: 0.105em;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.4);
+}
+
+.bj-table-copy div {
+  font-size: clamp(14px, 1.55vw, 25px);
+}
+
+.bj-table-copy span {
+  color: rgba(245, 236, 212, 0.72);
+  font-size: clamp(8px, 0.75vw, 12px);
+}
+
+.bj-table-arc {
+  border-color: rgba(233, 196, 118, 0.65);
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.bj-table-arc--outer {
+  top: 25%;
+  width: 65%;
+  height: 24%;
+}
+
+.bj-table-arc--inner {
+  top: 30%;
+  width: 59%;
+  height: 18%;
+  opacity: 0.55;
+}
+
+.bj-seat {
+  width: clamp(150px, 12.4vw, 202px);
+  height: clamp(136px, 19vh, 192px);
+}
+
+.bj-seat--1 { left: 12.5%; top: 67.5%; }
+.bj-seat--2 { left: 31%; top: 76.5%; }
+.bj-seat--3 { left: 50%; top: 80%; }
+.bj-seat--4 { left: 69%; top: 76.5%; }
+.bj-seat--5 { left: 87.5%; top: 67.5%; }
+
+.bj-seat__bet-circle {
+  width: 84%;
+  border-color: rgba(233, 196, 118, 0.5);
+}
+
+.bj-seat--active::before {
+  width: 89%;
+  border-color: rgba(53, 237, 149, 0.62);
+  box-shadow:
+    0 0 15px rgba(35, 218, 130, 0.14),
+    inset 0 0 22px rgba(7, 118, 68, 0.09);
+}
+
+.bj-seat.is-active-hand::before {
+  border-color: rgba(65, 246, 159, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(65, 246, 159, 0.09),
+    0 0 25px rgba(43, 230, 142, 0.38),
+    inset 0 0 26px rgba(7, 118, 68, 0.18);
+}
+
+.bj-seat__bet {
+  padding: 4px 9px;
+  border-color: rgba(230, 194, 119, 0.24);
+  background: rgba(6, 9, 8, 0.93);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bj-seat__badge {
+  bottom: -9px;
+  min-width: 124px;
+  gap: 7px;
+  padding: 5px 10px;
+  border-color: rgba(38, 230, 139, 0.48);
+  background: rgba(6, 10, 8, 0.94);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.36);
+}
+
+.bj-seat__badge strong {
+  font-size: 12px;
+}
+
+.bj-seat__badge small {
+  margin-top: 2px;
+  font-size: 8.5px;
+  letter-spacing: 0.07em;
+}
+
+.bj-seat__person {
+  width: 19px;
+}
+
+.bj-console {
+  left: 2.8%;
+  right: 2.8%;
+  bottom: 1.5%;
+  height: 9.2%;
+  min-height: 72px;
+  padding: 7px;
+  border-color: rgba(230, 194, 119, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(11, 14, 13, 0.985), rgba(4, 7, 6, 0.99));
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.52),
+    inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.bj-console__chips {
+  gap: clamp(3px, 0.45vw, 7px);
+  padding-right: 8px;
+  border-right-color: rgba(255, 255, 255, 0.07);
+}
+
+.bj-console-chip {
+  flex-basis: 58px;
+  min-width: 44px;
+  max-width: 60px;
+  border-width: 6px;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.14),
+    inset 0 0 0 6px rgba(255, 255, 255, 0.1);
+}
+
+.bj-chip-arrow {
+  width: 21px;
+  height: 50px;
+  font-size: 31px;
+  opacity: 0.58;
+}
+
+.bj-console__bet-actions,
+.bj-console__round-actions {
+  gap: 5px;
+}
+
+.bj-console__bet-actions {
+  padding-inline: 8px;
+}
+
+.bj-console__round-actions {
+  padding-left: 8px;
+  border-left-color: rgba(255, 255, 255, 0.07);
+}
+
+.bj-action,
+.bj-round-action {
+  min-height: 52px;
+  border-radius: 10px;
+}
+
+.bj-action {
+  background: #0e1412;
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.bj-action--place {
+  border-color: rgba(28, 214, 128, 0.66);
+  background: linear-gradient(180deg, #078653, #045b38);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.09),
+    0 0 14px rgba(11, 190, 106, 0.1);
+}
+
+.bj-action--gold {
+  border-color: rgba(221, 168, 72, 0.55);
+  background: linear-gradient(180deg, #654a20, #3c2a13);
+}
+
+.bj-round-action {
+  border-color: rgba(255, 255, 255, 0.11);
+  font-size: clamp(9px, 0.72vw, 12px);
+}
+
+.bj-round-action--hit {
+  background: linear-gradient(180deg, #087044, #06472c);
+}
+
+.bj-round-action--stand {
+  background: linear-gradient(180deg, #98242a, #5d171b);
+}
+
+.bj-round-action--double:not(:disabled),
+.bj-round-action--split:not(:disabled),
+.bj-round-action--insurance:not(:disabled) {
+  border-color: rgba(233, 196, 118, 0.7);
+  box-shadow:
+    inset 0 0 0 1px rgba(233, 196, 118, 0.07),
+    0 0 14px rgba(233, 196, 118, 0.1);
+}
+
+/* Portrait mobile: preserve the casino/table as the primary visual. */
+@media (max-width: 900px) and (orientation: portrait) {
+  .bj-root {
+    min-height: 600px;
+    background:
+      radial-gradient(circle at 50% 1%, rgba(211, 158, 66, 0.24), transparent 24%),
+      linear-gradient(180deg, #11110e 0%, #090b09 44%, #020403 100%);
+  }
+
+  .bj-hud {
+    top: max(7px, env(safe-area-inset-top));
+    border-radius: 11px;
+  }
+
+  .bj-hud--bankroll {
+    left: 7px;
+    width: 42.5%;
+    padding: 8px 10px 7px;
+  }
+
+  .bj-hud--status {
+    right: 7px;
+    width: 45.5%;
+    padding: 9px 10px 8px;
+  }
+
+  .bj-hud__pair > span,
+  .bj-hud__min > span,
+  .bj-hud--status > span {
+    font-size: clamp(7px, 1.95vw, 9px);
+    letter-spacing: 0.075em;
+  }
+
+  .bj-hud__pair strong {
+    font-size: clamp(17px, 5vw, 23px);
+  }
+
+  .bj-hud__pair {
+    padding-bottom: 5px;
+  }
+
+  .bj-hud__pair:nth-child(2) {
+    margin-top: 3px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .bj-hud__min {
+    padding-top: 5px;
+  }
+
+  .bj-hud__min strong {
+    font-size: clamp(11px, 3.3vw, 15px);
+  }
+
+  .bj-hud--status strong {
+    font-size: clamp(12px, 3.5vw, 17px);
+  }
+
+  .bj-hud--status small {
+    margin-top: 3px;
+    font-size: clamp(7px, 2vw, 9px);
+  }
+
+  .bj-deal-round {
+    margin-top: 5px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    font-size: 9px;
+  }
+
+  .bj-dealer-zone {
+    height: 31.5%;
+  }
+
+  .bj-dealer-figure {
+    bottom: 0;
+    width: clamp(154px, 41vw, 194px);
+    height: clamp(184px, 25vh, 232px);
+  }
+
+  .bj-chip-rack {
+    left: 3.5%;
+    bottom: 4.5%;
+    width: 25%;
+    height: 31px;
+    padding: 3px 4px;
+  }
+
+  .bj-rack-chip {
+    width: clamp(16px, 4.5vw, 22px);
+    height: clamp(16px, 4.5vw, 22px);
+  }
+
+  .bj-shoe {
+    right: 3.5%;
+    bottom: 4.5%;
+    width: 65px;
+    height: 44px;
+  }
+
+  .bj-shoe__deck {
+    right: 6px;
+    top: 5px;
+    width: 33px;
+    height: 27px;
+  }
+
+  .bj-table-shell {
+    left: -15%;
+    right: -15%;
+    top: 25.2%;
+    bottom: 30.5%;
+    filter: drop-shadow(0 22px 31px rgba(0, 0, 0, 0.61));
+  }
+
+  .bj-rail--inner {
+    inset: 10px 9px 16px;
+  }
+
+  .bj-felt {
+    inset: 18px 17px 26px;
+  }
+
+  .bj-dealer-hand {
+    top: 5.5%;
+  }
+
+  .bj-dealer-hand__label {
+    font-size: clamp(10px, 2.9vw, 13px);
+  }
+
+  .bj-card {
+    width: clamp(30px, 9vw, 40px);
+  }
+
+  .bj-table-copy {
+    top: 29.5%;
+    width: 66%;
+    opacity: 0.82;
+  }
+
+  .bj-table-copy div {
+    font-size: clamp(9px, 2.8vw, 12px);
+  }
+
+  .bj-table-copy span {
+    font-size: clamp(5px, 1.65vw, 8px);
+  }
+
+  .bj-table-arc--outer {
+    top: 23.5%;
+    width: 69%;
+  }
+
+  .bj-table-arc--inner {
+    top: 28.5%;
+    width: 62%;
+  }
+
+  .bj-seat {
+    width: clamp(72px, 21.5vw, 98px);
+    height: clamp(88px, 13vh, 116px);
+  }
+
+  .bj-seat--1 { left: 16%; top: 69%; }
+  .bj-seat--2 { left: 33%; top: 77%; }
+  .bj-seat--3 { left: 50%; top: 80.5%; }
+  .bj-seat--4 { left: 67%; top: 77%; }
+  .bj-seat--5 { left: 84%; top: 69%; }
+
+  .bj-seat__bet-circle {
+    width: 88%;
+  }
+
+  .bj-mobile-seat-tabs {
+    left: 7px;
+    right: 7px;
+    bottom: 26.9%;
+    height: clamp(42px, 5.8vh, 52px);
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    border-color: rgba(230, 194, 119, 0.22);
+    background: linear-gradient(180deg, rgba(9, 13, 12, 0.985), rgba(4, 7, 6, 0.985));
+  }
+
+  .bj-mobile-seat-tab {
+    border-radius: 8px;
+    background: #0d1210;
+  }
+
+  .bj-mobile-seat-tab strong {
+    font-size: clamp(13px, 4vw, 17px);
+  }
+
+  .bj-mobile-seat-tab small {
+    font-size: clamp(5.5px, 1.6vw, 7px);
+  }
+
+  .bj-console {
+    left: 7px;
+    right: 7px;
+    bottom: max(6px, env(safe-area-inset-bottom));
+    height: 25.6%;
+    min-height: 202px;
+    grid-template-rows: 28% 36% 36%;
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .bj-console__chips {
+    gap: clamp(2px, 0.75vw, 4px);
+    padding-bottom: 5px;
+  }
+
+  .bj-chip-arrow {
+    width: 16px;
+    height: 39px;
+    font-size: 26px;
+  }
+
+  .bj-console-chip {
+    flex-basis: clamp(38px, 11.3vw, 48px);
+    min-width: 35px;
+    max-width: 48px;
+    border-width: 5px;
+  }
+
+  .bj-console__bet-actions,
+  .bj-console__round-actions {
+    gap: 4px;
+  }
+
+  .bj-action,
+  .bj-round-action {
+    border-radius: 8px;
+  }
+
+  .bj-action strong,
+  .bj-round-action {
+    font-size: clamp(7px, 2.15vw, 10px);
+  }
+
+  .bj-action__icon {
+    font-size: clamp(14px, 4.5vw, 19px);
+  }
+
+  .bj-split-hand {
+    background: linear-gradient(180deg, rgba(4, 42, 28, 0.66), rgba(2, 22, 15, 0.36));
+  }
+}
+
+/* Short desktop/tablet heights: protect the dealer/table/console hierarchy. */
+@media (min-width: 901px) and (max-height: 760px) {
+  .bj-dealer-figure {
+    height: clamp(205px, 31vh, 260px);
+  }
+
+  .bj-table-shell {
+    top: 24.5%;
+    bottom: 12%;
+  }
+
+  .bj-console {
+    min-height: 66px;
+    height: 9.5%;
+  }
+
+  .bj-card {
+    width: clamp(42px, 3.25vw, 54px);
+  }
+
+  .bj-seat {
+    height: clamp(124px, 19vh, 164px);
+  }
+}
+
+/* Ultra-wide displays should not make the table feel horizontally empty. */
+@media (min-aspect-ratio: 21/9) and (min-width: 1400px) {
+  .bj-stage {
+    width: min(1920px, 100%);
+    margin-inline: auto;
+  }
+
+  .bj-table-shell {
+    left: 2.8%;
+    right: 2.8%;
+  }
+}

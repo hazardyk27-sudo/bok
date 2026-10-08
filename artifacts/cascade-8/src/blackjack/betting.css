@@ -1,0 +1,60 @@
+.bj-wager-chip {
+  position: absolute;
+  left: calc(4px + (var(--bj-chip-index) * 16px));
+  top: calc(8px - (var(--bj-chip-index) * 2px));
+  width: 34px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 4px dashed rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 4px 4px rgba(0, 0, 0, 0.38),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.1);
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
+  color: #fff;
+}
+
+.bj-wager-chip > span {
+  display: grid;
+  place-items: center;
+  width: 67%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.17);
+}
+
+.bj-wager-chip--white {
+  color: #111;
+  background: #ecece5;
+  border-color: #555;
+}
+
+.bj-wager-chip--white > span {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.bj-wager-chip--red { background: #c82f35; }
+.bj-wager-chip--green { background: #0b8e50; }
+.bj-wager-chip--blue { background: #1d58ba; }
+.bj-wager-chip--black {
+  background: #222;
+  border-color: #d4b26c;
+}
+
+.bj-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: saturate(0.65);
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .bj-wager-chip {
+    left: calc(3px + (var(--bj-chip-index) * 12px));
+    width: 27px;
+    border-width: 3px;
+    font-size: 7px;
+  }
+}

@@ -1,0 +1,33 @@
+.bj-live-authority {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 16px;
+  margin-top: -2px;
+  color: rgba(225, 232, 226, 0.5);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.bj-root[data-live-authority="server"] .bj-hud--status small {
+  max-width: 34ch;
+}
+
+.bj-root[data-live-authority="server"] button:disabled {
+  cursor: default;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .bj-live-authority {
+    min-height: 12px;
+    margin-top: -4px;
+    font-size: 7px;
+    letter-spacing: 0.11em;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-hud--status small {
+    max-width: 28ch;
+  }
+}

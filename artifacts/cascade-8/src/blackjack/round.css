@@ -1,0 +1,459 @@
+.bj-deal-round {
+  margin-top: 10px;
+  min-width: 170px;
+  padding: 9px 16px;
+  border: 1px solid #19dc82;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(180deg, #0da965, #057044);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.14), 0 0 18px rgba(20, 220, 130, 0.18);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.bj-deal-round:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: saturate(0.6);
+}
+
+.bj-dealer-hand__waiting {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(230, 189, 106, 0.32);
+  border-radius: 14px;
+  color: rgba(244, 234, 208, 0.78);
+  background: rgba(3, 18, 12, 0.45);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.bj-card--back {
+  border-color: rgba(228, 192, 119, 0.8);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 5px, rgba(230, 189, 106, 0.18) 5px 7px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, rgba(230, 189, 106, 0.12) 5px 7px),
+    linear-gradient(145deg, #153c2d, #071b14);
+  box-shadow: inset 0 0 0 4px rgba(6, 10, 8, 0.52), 0 5px 8px rgba(0, 0, 0, 0.28);
+}
+
+.bj-card--back::after {
+  content: "♠";
+  position: absolute;
+  inset: 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(230, 189, 106, 0.45);
+  border-radius: 3px;
+  color: rgba(230, 189, 106, 0.58);
+  font: 700 clamp(20px, 1.7vw, 29px)/1 Georgia, serif;
+}
+
+.bj-seat.is-active-hand::before {
+  border-color: rgba(27, 255, 145, 0.98);
+  box-shadow:
+    0 0 0 2px rgba(27, 255, 145, 0.13),
+    0 0 28px rgba(27, 255, 145, 0.56),
+    inset 0 0 30px rgba(7, 118, 68, 0.22);
+}
+
+.bj-seat.is-active-hand .bj-seat__badge {
+  border-color: #24ef92;
+  box-shadow: 0 0 20px rgba(36, 239, 146, 0.4);
+}
+
+.bj-seat.is-blackjack .bj-seat__badge,
+.bj-seat.is-result-blackjack .bj-seat__badge {
+  border-color: #f3c86e;
+  box-shadow: 0 0 18px rgba(243, 200, 110, 0.32);
+}
+
+.bj-seat.is-blackjack .bj-seat__badge small,
+.bj-seat.is-result-blackjack .bj-seat__badge small {
+  color: #f3c86e;
+}
+
+.bj-seat.is-bust .bj-seat__badge,
+.bj-seat.is-result-lose .bj-seat__badge {
+  border-color: rgba(240, 68, 68, 0.78);
+  box-shadow: 0 0 16px rgba(240, 68, 68, 0.2);
+}
+
+.bj-seat.is-bust .bj-seat__badge small,
+.bj-seat.is-result-lose .bj-seat__badge small {
+  color: #ff8b8b;
+}
+
+.bj-seat.is-result-win .bj-seat__badge {
+  border-color: rgba(36, 239, 146, 0.88);
+  box-shadow: 0 0 20px rgba(36, 239, 146, 0.28);
+}
+
+.bj-seat.is-result-win .bj-seat__badge small {
+  color: #3af39a;
+}
+
+.bj-seat.is-result-push .bj-seat__badge,
+.bj-seat.is-stood .bj-seat__badge {
+  border-color: rgba(219, 185, 112, 0.62);
+}
+
+.bj-seat.is-result-push .bj-seat__badge small,
+.bj-seat.is-stood .bj-seat__badge small {
+  color: #e4cf9b;
+}
+
+.bj-seat.is-doubled:not(.is-result-win):not(.is-result-lose):not(.is-result-push) .bj-seat__badge {
+  border-color: rgba(243, 200, 110, 0.9);
+  box-shadow: 0 0 18px rgba(243, 200, 110, 0.22);
+}
+
+.bj-seat.is-doubled .bj-seat__bet {
+  color: #f3c86e;
+  font-weight: 900;
+}
+
+.bj-round-action--double:not(:disabled),
+.bj-round-action--split:not(:disabled),
+.bj-round-action--insurance:not(:disabled) {
+  border-color: rgba(243, 200, 110, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(243, 200, 110, 0.12), 0 0 18px rgba(243, 200, 110, 0.2);
+}
+
+.bj-console__round-actions.is-insurance-phase {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bj-round-action--insurance:not(:disabled) {
+  color: #f7d992;
+  background: linear-gradient(180deg, rgba(112, 75, 23, 0.46), rgba(63, 40, 12, 0.46));
+}
+
+.bj-hand-insurance {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 43px;
+  transform: translateX(-50%);
+  max-width: 155px;
+  padding: 3px 7px;
+  overflow: hidden;
+  border: 1px solid rgba(243, 200, 110, 0.52);
+  border-radius: 10px;
+  color: #f4d68f;
+  background: rgba(24, 17, 6, 0.78);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-result-win .bj-hand-insurance {
+  border-color: rgba(36, 239, 146, 0.55);
+}
+
+.is-result-lose .bj-hand-insurance {
+  border-color: rgba(240, 68, 68, 0.45);
+}
+
+.bj-split-hand .bj-hand-insurance {
+  bottom: 31px;
+  max-width: 86px;
+  padding: 2px 4px;
+  font-size: 5.5px;
+}
+
+.bj-seat--split {
+  width: clamp(210px, 16vw, 270px);
+}
+
+.bj-seat--split-many {
+  width: clamp(250px, 20vw, 330px);
+}
+
+.bj-split-hands {
+  position: absolute;
+  z-index: 12;
+  inset: -10px -28px 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bj-seat--split-many .bj-split-hands {
+  inset: -24px -54px 44px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.bj-split-hand {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  border: 1px solid rgba(224, 188, 112, 0.38);
+  border-radius: 15px;
+  background: linear-gradient(180deg, rgba(4, 48, 31, 0.58), rgba(2, 25, 17, 0.28));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.bj-split-hand.is-active-subhand {
+  border-color: #24ef92;
+  box-shadow:
+    0 0 0 2px rgba(36, 239, 146, 0.13),
+    0 0 24px rgba(36, 239, 146, 0.42),
+    inset 0 0 24px rgba(14, 122, 73, 0.18);
+  transform: translateY(-3px);
+}
+
+.bj-split-hand.is-result-win {
+  border-color: rgba(36, 239, 146, 0.78);
+}
+
+.bj-split-hand.is-result-lose,
+.bj-split-hand.is-bust {
+  border-color: rgba(240, 68, 68, 0.72);
+}
+
+.bj-split-hand.is-result-push,
+.bj-split-hand.is-stood {
+  border-color: rgba(219, 185, 112, 0.62);
+}
+
+.bj-split-hand.is-ace-split,
+.bj-seat--split.is-ace-split .bj-seat__round-badge {
+  border-color: rgba(243, 200, 110, 0.86);
+  box-shadow: 0 0 18px rgba(243, 200, 110, 0.18);
+}
+
+.bj-split-hand__label {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border: 1px solid rgba(230, 189, 106, 0.42);
+  border-radius: 8px;
+  color: #f3d58e;
+  background: rgba(6, 19, 14, 0.94);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.bj-split-hand .bj-seat__total {
+  top: 3px;
+  min-width: 34px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.bj-split-hand .bj-seat__cards {
+  top: 27%;
+  transform: translateX(-50%) scale(0.78);
+  transform-origin: top center;
+}
+
+.bj-seat--split-many .bj-split-hand .bj-seat__total {
+  top: 1px;
+  min-width: 28px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.bj-seat--split-many .bj-split-hand .bj-seat__cards {
+  top: 24%;
+  transform: translateX(-50%) scale(0.52);
+}
+
+.bj-split-hand__bet {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: 21px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border-radius: 9px;
+  color: #f3d58e;
+  background: rgba(0, 0, 0, 0.46);
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.bj-split-hand__status {
+  position: absolute;
+  z-index: 8;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  overflow: hidden;
+  color: rgba(247, 243, 229, 0.86);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bj-seat--split-many .bj-split-hand__bet {
+  bottom: 15px;
+  padding: 2px 5px;
+  font-size: 7px;
+}
+
+.bj-seat--split-many .bj-split-hand__status {
+  bottom: 2px;
+  font-size: 5.5px;
+}
+
+.bj-split-hand.is-active-subhand .bj-split-hand__status {
+  color: #45f4a4;
+}
+
+.bj-split-hand.is-ace-split .bj-split-hand__status,
+.bj-seat--split.is-ace-split .bj-seat__round-badge small {
+  color: #f3d58e;
+}
+
+.bj-seat__round-badge--split {
+  min-width: 132px;
+}
+
+.bj-seat--sitting-out .bj-seat__bet-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(244, 234, 208, 0.62);
+  background: rgba(3, 26, 17, 0.2);
+  border-style: dashed;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.bj-seat__round-badge {
+  cursor: default;
+}
+
+.bj-seat__round-badge small {
+  white-space: nowrap;
+}
+
+.bj-round-lock-note {
+  color: rgba(244, 234, 208, 0.55);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.bj-console-chip:disabled,
+.bj-chip-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  filter: saturate(0.58);
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .bj-deal-round {
+    min-width: 0;
+    width: 100%;
+    margin-top: 6px;
+    padding: 7px 10px;
+    font-size: 10px;
+  }
+
+  .bj-dealer-hand__waiting {
+    margin-top: 3px;
+    padding: 3px 8px;
+    font-size: 8px;
+  }
+
+  .bj-console__round-actions.is-insurance-phase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bj-hand-insurance {
+    bottom: 34px;
+    max-width: 105px;
+    padding: 2px 5px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand .bj-hand-insurance {
+    bottom: 23px;
+    max-width: 58px;
+    font-size: 4.5px;
+  }
+
+  .bj-seat--split,
+  .bj-seat--split-many {
+    width: 150px;
+  }
+
+  .bj-split-hands {
+    inset: -4px -14px 38px;
+    gap: 3px;
+  }
+
+  .bj-seat--split-many .bj-split-hands {
+    inset: -12px -18px 36px;
+    gap: 2px;
+  }
+
+  .bj-split-hand {
+    border-radius: 10px;
+  }
+
+  .bj-split-hand__label {
+    top: -11px;
+    padding: 2px 5px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand .bj-seat__total,
+  .bj-seat--split-many .bj-split-hand .bj-seat__total {
+    min-width: 24px;
+    height: 20px;
+    font-size: 8px;
+  }
+
+  .bj-split-hand .bj-seat__cards {
+    top: 25%;
+    transform: translateX(-50%) scale(0.58);
+  }
+
+  .bj-seat--split-many .bj-split-hand .bj-seat__cards {
+    top: 23%;
+    transform: translateX(-50%) scale(0.39);
+  }
+
+  .bj-split-hand__bet,
+  .bj-seat--split-many .bj-split-hand__bet {
+    bottom: 13px;
+    padding: 2px 4px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand__status,
+  .bj-seat--split-many .bj-split-hand__status {
+    bottom: 2px;
+    font-size: 5px;
+  }
+
+  .bj-seat--sitting-out .bj-seat__bet-circle {
+    font-size: 8px;
+  }
+
+  .bj-seat__round-badge small {
+    font-size: 8px;
+  }
+}

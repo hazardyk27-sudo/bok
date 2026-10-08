@@ -4,6 +4,7 @@ import { router as cadiKazanRouter } from "../cadi-kazan";
 import { router as slotRouter } from "../slot";
 import { router as idleRouter } from "../idle";
 import { router as rouletteRouter } from "../roulette";
+import { router as blackjackRouter } from "../blackjack";
 import { authRouter } from "../auth";
 import { sessionConvergenceRouter } from "../platform/sessionConvergence";
 
@@ -16,5 +17,6 @@ router.use(cadiKazanRouter);
 router.use(slotRouter);
 router.use(idleRouter);
 router.use(rouletteRouter);
+router.use(blackjackRouter);
 
 export default router;

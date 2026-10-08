@@ -41,8 +41,9 @@ const isSlotRoute = currentPath === "/slot" || isLab;
 const isWitchRoute = currentPath === "/cadi-kazan";
 const isBusinessesRoute = currentPath === "/businesses";
 const isRouletteRoute = currentPath === "/roulette";
+const isBlackjackRoute = currentPath === "/blackjack";
 const isAccountRoute = currentPath === "/account";
-const isHubRoute = !isSlotRoute && !isWitchRoute && !isBusinessesRoute && !isRouletteRoute && !isAccountRoute;
+const isHubRoute = !isSlotRoute && !isWitchRoute && !isBusinessesRoute && !isRouletteRoute && !isBlackjackRoute && !isAccountRoute;
 
 if (isWitchRoute || isHubRoute) {
   await import("./styles.css");
@@ -60,6 +61,9 @@ if (isWitchRoute) {
 } else if (isRouletteRoute) {
   const rouletteModule = await import("./roulette");
   rouletteModule.mountRoulette(app);
+} else if (isBlackjackRoute) {
+  const blackjackModule = await import("./blackjack/live");
+  blackjackModule.mountBlackjackLive(app);
 } else if (isAccountRoute) {
   const accountModule = await import("./account");
   accountModule.mountAccount(app);
