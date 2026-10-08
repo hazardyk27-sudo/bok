@@ -73,6 +73,14 @@
         "artifacts/api-server/src/roulette",
         "lib/db/src/schema/roulette.ts"
       ]
+    },
+    "blackjack": {
+      "branch": "feature/blackjack",
+      "roots": [
+        "artifacts/cascade-8/src/blackjack",
+        "artifacts/api-server/src/blackjack",
+        "lib/db/src/schema/blackjack.ts"
+      ]
     }
   }
 }
