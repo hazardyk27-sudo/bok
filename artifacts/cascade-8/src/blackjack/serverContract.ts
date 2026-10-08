@@ -78,3 +78,8 @@ export type BlackjackServerSnapshot = {
   };
   serverTimeMs: number;
 };
+
+export type BlackjackServerErrorPayload = {
+  error: string;
+  snapshot?: BlackjackServerSnapshot;
+};
