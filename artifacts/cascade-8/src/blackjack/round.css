@@ -98,6 +98,13 @@
   letter-spacing: 0.06em;
 }
 
+.bj-console-chip:disabled,
+.bj-chip-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  filter: saturate(0.58);
+}
+
 @media (max-width: 900px) and (orientation: portrait) {
   .bj-deal-round {
     min-width: 0;
