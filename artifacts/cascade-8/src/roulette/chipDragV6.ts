@@ -4,10 +4,13 @@ import {
   type RouletteBetPlacement,
 } from "./betState";
 import {
-  createRouletteCanonicalPlacedChip,
-  syncRouletteCanonicalChipFace,
-} from "./canonicalPlacedChip";
-import { getRouletteBetAuthoritySnapshot } from "./betAuthorityVisual";
+  getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
+} from "./betAuthorityVisual";
+import {
+  renderRouletteBetTopology,
+  renderRouletteCurrentAuthorityBets,
+} from "./authorityBetDom";
 import { RouletteWalletClient } from "./rouletteWalletClient";
 
 const HOLD_MS = 120;
@@ -225,44 +228,6 @@ function snapGhostToCell(
     ghostTransform(left, top, 1),
     "important",
   );
-}
-
-function renderOptimisticBets(
-  app: HTMLDivElement,
-  bets: readonly RouletteBetPlacement[],
-) {
-  const totals = getRouletteBetTotals(bets);
-
-  app.querySelectorAll<HTMLElement>("[data-bet-id]").forEach((cell) => {
-    const betId = cell.dataset.betId;
-    if (!betId) return;
-
-    const amount = totals[betId] ?? 0;
-    const chips = Array.from(
-      cell.querySelectorAll<HTMLElement>(".roulette-placed-chip"),
-    );
-
-    if (amount <= 0) {
-      chips.forEach((chip) => chip.remove());
-      cell.classList.remove("has-bet");
-      return;
-    }
-
-    const chip = chips[0] ?? createRouletteCanonicalPlacedChip(amount);
-    chips.slice(1).forEach((extra) => extra.remove());
-    syncRouletteCanonicalChipFace(chip, amount);
-    cell.classList.add("has-bet");
-    if (!chip.isConnected || chip.parentElement !== cell) {
-      cell.append(chip);
-    }
-  });
-}
-
-function renderAuthorityBets(app: HTMLDivElement) {
-  const bets = getRouletteBetAuthoritySnapshot().bets;
-  if (bets) {
-    renderOptimisticBets(app, bets);
-  }
 }
 
 export function createRouletteMovedBets(
@@ -575,68 +540,78 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
       return;
     }
 
+    // SNAP_MS is visual only. State ownership moves at pointer-up, before any
+    // timeout or paint opportunity, so stale runtime/poll DOM cannot show the
+    // old cell between the optimistic move and the server confirmation.
     snapGhostToCell(completed, targetCell);
-    window.setTimeout(() => {
-      // The snap animation is deliberately visual only. Re-read authority at
-      // commit time so a place/x2/undo that happened during these 45 ms cannot
-      // be overwritten by a stale drop snapshot.
-      const latestAuthority =
-        getRouletteBetAuthoritySnapshot();
-      const latestBets = latestAuthority.bets;
 
-      if (
-        !latestAuthority.roundId ||
-        !latestBets ||
-        !bettingOpen(page, panel) ||
-        (getRouletteBetTotals(latestBets)[completed.betId] ?? 0) <= 0
-      ) {
-        completed.ghost.remove();
-        completed.chip.classList.remove("is-chip-drag-source");
-        renderAuthorityBets(app);
-        return;
-      }
+    const latestAuthority =
+      getRouletteBetAuthoritySnapshot();
+    const latestBets = latestAuthority.bets;
 
-      let nextBets: RouletteBetPlacement[];
-      try {
-        nextBets = createRouletteMovedBets(
-          latestBets,
-          completed.betId,
-          targetBetId,
-        );
-      } catch (error) {
-        console.error("[roulette] chip drag rejected", error);
-        completed.ghost.remove();
-        completed.chip.classList.remove("is-chip-drag-source");
-        renderAuthorityBets(app);
-        return;
-      }
-
+    if (
+      !latestAuthority.roundId ||
+      !latestBets ||
+      !bettingOpen(page, panel) ||
+      (getRouletteBetTotals(latestBets)[completed.betId] ?? 0) <= 0
+    ) {
       completed.ghost.remove();
       completed.chip.classList.remove("is-chip-drag-source");
-      renderOptimisticBets(app, nextBets);
+      renderRouletteCurrentAuthorityBets(app);
+      return;
+    }
+
+    let nextBets: RouletteBetPlacement[];
+    try {
+      nextBets = createRouletteMovedBets(
+        latestBets,
+        completed.betId,
+        targetBetId,
+      );
+    } catch (error) {
+      console.error("[roulette] chip drag rejected", error);
+      completed.ghost.remove();
+      completed.chip.classList.remove("is-chip-drag-source");
+      renderRouletteCurrentAuthorityBets(app);
+      return;
+    }
+
+    setRouletteBetAuthority(
+      latestAuthority.roundId,
+      nextBets,
+      latestAuthority.revision,
+      true,
+    );
+    renderRouletteBetTopology(app, nextBets);
+
+    // Start the serialized authority write immediately. The animation below is
+    // never allowed to delay wager state/network ownership.
+    void commitRouletteSequentialChipMove(
+      wallet,
+      latestAuthority.roundId,
+      latestAuthority.revision,
+      latestBets,
+      completed.betId,
+      targetBetId,
+    )
+      .then(() => {
+        renderRouletteCurrentAuthorityBets(app);
+      })
+      .catch((error) => {
+        console.error("[roulette] chip drag sync failed", error);
+        renderRouletteCurrentAuthorityBets(app);
+      });
+
+    window.setTimeout(() => {
+      completed.ghost.remove();
+      completed.chip.classList.remove("is-chip-drag-source");
       targetCell.classList.add("roulette-chip-drop-confirmed");
       window.setTimeout(
         () => targetCell.classList.remove("roulette-chip-drop-confirmed"),
         140,
       );
       navigator.vibrate?.(5);
-
-      void commitRouletteSequentialChipMove(
-        wallet,
-        latestAuthority.roundId,
-        latestAuthority.revision,
-        latestBets,
-        completed.betId,
-        targetBetId,
-      )
-        .then(() => {
-          renderAuthorityBets(app);
-        })
-        .catch((error) => {
-          console.error("[roulette] chip drag sync failed", error);
-          renderAuthorityBets(app);
-        });
-    }, SNAP_MS);
+    }, SNAP_MS + 10);
   };
 
   panel.addEventListener("pointerup", (event) => finish(event, false));
