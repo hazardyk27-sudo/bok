@@ -22,30 +22,33 @@ function cssBlock(selector: string) {
 }
 
 describe("roulette drag chip visual regression", () => {
-  it("keeps the $10 denomination on the white casino-chip palette", () => {
+  it("keeps the $10 denomination on the white casino-chip base color", () => {
     expect(getRouletteChipTier(10)).toBe("white");
-    expect(getRouletteChipPalette(10)).toMatchObject({
-      main: "#F1F1EE",
-      inner: "#D9D9D4",
-      ink: "#1A1A1A",
+    expect(getRouletteChipPalette(10)).toEqual({
+      base: "#F1F1EE",
     });
   });
 
-  it("re-applies the source casino-chip face to the body-mounted drag clone", () => {
+  it("re-applies the same canonical casino-chip face to the body-mounted drag clone", () => {
     const block = cssBlock(
       ".roulette-chip-drag-ghost.roulette-casino-chip {",
     );
 
     expect(block).toContain(
-      "background-color: var(--casino-chip-main) !important",
+      "background-color: var(--casino-chip-base) !important",
     );
     expect(block).toContain(
       "background-image: var(--casino-chip-face) !important",
     );
     expect(block).toContain(
-      "color: var(--casino-chip-ink) !important",
+      "color: var(--casino-chip-ink-fixed) !important",
     );
     expect(block).toContain("mix-blend-mode: normal !important");
+    expect(block).not.toContain("--casino-chip-main");
+    expect(block).not.toContain("--casino-chip-inner");
+    expect(block).not.toContain("--casino-chip-accent");
+    expect(block).not.toContain("--casino-chip-highlight");
+    expect(block).not.toContain("--casino-chip-ink)");
     expect(block.toLowerCase()).not.toContain("#2f78c8");
     expect(block.toLowerCase()).not.toContain("#1f5ea3");
     expect(block.toLowerCase()).not.toContain("hue-rotate");
