@@ -14,6 +14,7 @@ import {
   doubleRouletteBets,
   getRouletteBetTotals,
   placeRouletteBet,
+  snapshotRouletteRound,
   undoRouletteBet,
 } from "./betState";
 import {
@@ -83,6 +84,44 @@ describe("roulette runtime authority synchronization", () => {
     ).toMatchObject({
       roundId: "round-1",
       revision: 7,
+      optimistic: true,
+      bets: state.placements,
+    });
+  });
+
+  it("marks reducer intent optimistic immediately and snapshotting preserves that metadata", () => {
+    let state = createRouletteBetState();
+    setRouletteBetAuthority(
+      "round-1",
+      [],
+      4,
+      false,
+    );
+
+    state = placeRouletteBet(
+      state,
+      "straight-25",
+    );
+
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      roundId: "round-1",
+      revision: 4,
+      optimistic: true,
+      bets: [{
+        betId: "straight-25",
+        amount: 10,
+      }],
+    });
+
+    state = snapshotRouletteRound(state);
+
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      roundId: "round-1",
+      revision: 4,
       optimistic: true,
       bets: state.placements,
     });
