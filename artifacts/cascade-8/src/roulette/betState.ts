@@ -3,6 +3,9 @@ import {
   getRouletteAuthorityStoreBets,
   setRouletteAuthorityStoreBets,
 } from "./betAuthorityStore";
+import {
+  consumeRouletteCapturedPlaceIntent,
+} from "./capturedPlaceIntent";
 
 export const ROULETTE_CHIP_VALUES: readonly number[] = [
   10,
@@ -82,6 +85,20 @@ export function placeRouletteBet(
   betId: string,
 ): RouletteBetState {
   if (!betId) return state;
+
+  // The capture-phase fast-place layer already computed this click from the
+  // current canonical authority. Consume that exact plan instead of rebuilding
+  // from a possibly stale runtime mirror (for example immediately after drag).
+  const captured =
+    consumeRouletteCapturedPlaceIntent(
+      betId,
+    );
+  if (captured) {
+    return withAuthoritativePlacements(
+      state,
+      captured,
+    );
+  }
 
   const placements =
     getRouletteEffectivePlacements(state);
