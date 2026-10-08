@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { type BlackjackCard, type BlackjackRank, type BlackjackSuit } from "./blackjackCore";
+import {
+  type BlackjackCard,
+  type BlackjackRank,
+  type BlackjackSuit,
+} from "./blackjackCore";
 import {
   getBlackjackRoundReadiness,
+  hitBlackjackHand,
+  standBlackjackHand,
   startBlackjackRound,
 } from "./roundState";
 import {
@@ -9,6 +15,7 @@ import {
   clearSeatBet,
   createInitialSeatState,
   sitAtSeat,
+  type BlackjackSeatState,
 } from "./seatState";
 import { type BlackjackShoe } from "./shoe";
 
@@ -33,6 +40,13 @@ function shoeWith(cards: BlackjackCard[]): BlackjackShoe {
     deckCount: 6,
     shufflePending: false,
   };
+}
+
+function onlySeatOne(): BlackjackSeatState {
+  let state = createInitialSeatState();
+  state = clearSeatBet(state, 3);
+  state = clearSeatBet(state, 5);
+  return state;
 }
 
 describe("blackjack round readiness", () => {
@@ -70,7 +84,7 @@ describe("blackjack round readiness", () => {
 });
 
 describe("blackjack initial deal", () => {
-  it("deals seats 1 -> 5 around the table, hides dealer logic separately, and skips natural blackjack for first action", () => {
+  it("deals seats 1 -> 5 around the table and skips natural blackjack for first action", () => {
     const state = createInitialSeatState();
     const cards = [
       card("A", 0),
@@ -107,6 +121,7 @@ describe("blackjack initial deal", () => {
       seatId: 1,
       wager: 50,
       status: "blackjack",
+      result: null,
     });
     expect(result.round.hands[1]).toMatchObject({
       seatId: 3,
@@ -119,7 +134,7 @@ describe("blackjack initial deal", () => {
     expect(result.shoe.nextIndex).toBe(8);
   });
 
-  it("moves directly to dealer resolution when the dealer has natural blackjack", () => {
+  it("settles immediately when the dealer has natural blackjack", () => {
     const state = createInitialSeatState();
     const cards = [
       card("9", 0),
@@ -136,6 +151,165 @@ describe("blackjack initial deal", () => {
 
     expect(result.round.dealer.blackjack).toBe(true);
     expect(result.round.activeSeatId).toBeNull();
-    expect(result.round.phase).toBe("dealerTurn");
+    expect(result.round.phase).toBe("complete");
+    expect(result.round.hands.every((hand) => hand.result === "lose")).toBe(true);
+  });
+});
+
+describe("blackjack player actions and dealer resolution", () => {
+  it("HIT draws exactly one card and keeps the same seat active below 21", () => {
+    const cards = [
+      card("5", 0),
+      card("10", 1),
+      card("6", 2),
+      card("7", 3),
+      card("4", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const hit = hitBlackjackHand(started.round, started.shoe);
+
+    expect(hit.round.phase).toBe("playerTurns");
+    expect(hit.round.activeSeatId).toBe(1);
+    expect(hit.round.hands[0]).toMatchObject({ status: "playing", result: null });
+    expect(hit.round.hands[0]?.cards).toHaveLength(3);
+    expect(hit.round.hands[0]?.cards[2]?.id).toBe(cards[4]?.id);
+    expect(hit.shoe.nextIndex).toBe(5);
+  });
+
+  it("HIT busts the active hand and advances to the next playable seat", () => {
+    const state = createInitialSeatState();
+    const cards = [
+      card("10", 0),
+      card("8", 1),
+      card("7", 2),
+      card("6", 3),
+      card("9", 4),
+      card("8", 5),
+      card("7", 6),
+      card("10", 7),
+      card("5", 8),
+    ];
+    const started = startBlackjackRound(state, shoeWith(cards), 10);
+    const hit = hitBlackjackHand(started.round, started.shoe);
+
+    expect(started.round.activeSeatId).toBe(1);
+    expect(hit.round.hands[0]?.status).toBe("bust");
+    expect(hit.round.activeSeatId).toBe(3);
+    expect(hit.round.phase).toBe("playerTurns");
+  });
+
+  it("HIT to exactly 21 auto-stands and advances", () => {
+    const state = createInitialSeatState();
+    const cards = [
+      card("10", 0),
+      card("8", 1),
+      card("7", 2),
+      card("6", 3),
+      card("6", 4),
+      card("8", 5),
+      card("7", 6),
+      card("10", 7),
+      card("5", 8),
+    ];
+    const started = startBlackjackRound(state, shoeWith(cards), 10);
+    const hit = hitBlackjackHand(started.round, started.shoe);
+
+    expect(hit.round.hands[0]?.status).toBe("stood");
+    expect(hit.round.activeSeatId).toBe(3);
+  });
+
+  it("STAND on the final hand makes dealer hit soft 17 and settles a loss", () => {
+    const cards = [
+      card("10", 0),
+      card("A", 1),
+      card("8", 2),
+      card("6", 3),
+      card("4", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const settled = standBlackjackHand(started.round, started.shoe);
+
+    expect(settled.round.phase).toBe("complete");
+    expect(settled.round.activeSeatId).toBeNull();
+    expect(settled.round.dealer.cards).toHaveLength(3);
+    expect(settled.round.dealer.cards[2]?.id).toBe(cards[4]?.id);
+    expect(settled.round.hands[0]).toMatchObject({
+      status: "stood",
+      result: "lose",
+      returnAmount: 0,
+      netAmount: -50,
+    });
+  });
+
+  it("pays a normal win 1:1 when the dealer busts", () => {
+    const cards = [
+      card("10", 0),
+      card("10", 1),
+      card("8", 2),
+      card("6", 3),
+      card("K", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const settled = standBlackjackHand(started.round, started.shoe);
+
+    expect(settled.round.hands[0]).toMatchObject({
+      result: "win",
+      returnAmount: 100,
+      netAmount: 50,
+    });
+  });
+
+  it("returns the wager on a push", () => {
+    const cards = [
+      card("10", 0),
+      card("10", 1),
+      card("8", 2),
+      card("8", 3),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const settled = standBlackjackHand(started.round, started.shoe);
+
+    expect(settled.round.hands[0]).toMatchObject({
+      result: "push",
+      returnAmount: 50,
+      netAmount: 0,
+    });
+  });
+
+  it("pays a natural blackjack at 3:2", () => {
+    const cards = [
+      card("A", 0),
+      card("9", 1),
+      card("K", 2),
+      card("7", 3),
+    ];
+    const settled = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+
+    expect(settled.round.phase).toBe("complete");
+    expect(settled.round.hands[0]).toMatchObject({
+      status: "blackjack",
+      result: "blackjack",
+      returnAmount: 125,
+      netAmount: 75,
+    });
+  });
+
+  it("pushes player blackjack against dealer blackjack", () => {
+    const cards = [
+      card("A", 0),
+      card("A", 1, "hearts"),
+      card("K", 2),
+      card("K", 3, "hearts"),
+    ];
+    const settled = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+
+    expect(settled.round.phase).toBe("complete");
+    expect(settled.round.dealer.blackjack).toBe(true);
+    expect(settled.round.hands[0]).toMatchObject({
+      status: "blackjack",
+      result: "push",
+      returnAmount: 50,
+      netAmount: 0,
+    });
   });
 });
