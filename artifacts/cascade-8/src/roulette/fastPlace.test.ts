@@ -20,10 +20,18 @@ import {
 import {
   clearRouletteExternalLatestMutationForTests,
 } from "./latestMutationDeduper";
+import {
+  clearRouletteCapturedPlaceIntentForTests,
+} from "./capturedPlaceIntent";
+import {
+  placeRouletteBet,
+  type RouletteBetState,
+} from "./betState";
 
 afterEach(() => {
   clearRouletteBetAuthority();
   clearRouletteExternalLatestMutationForTests();
+  clearRouletteCapturedPlaceIntentForTests();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
 });
@@ -58,7 +66,7 @@ describe("roulette fast normal placement", () => {
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
         <strong data-wallet-balance>$100</strong>
-        <section data-roulette-bet-panel>
+        <section data-roulette-bet-panel aria-disabled="false">
           <button data-chip-value="10" aria-pressed="true">10</button>
           <button data-bet-id="straight-8">8</button>
         </section>
@@ -128,12 +136,12 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
   });
 
-  it("keeps a newer serialized reservation over an older higher server repaint", async () => {
+  it("hands a serialized post-drag click to the reducer without rebuilding stale topology", async () => {
     const app = document.createElement("div");
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
         <strong data-wallet-balance>$100</strong>
-        <section data-roulette-bet-panel>
+        <section data-roulette-bet-panel aria-disabled="false">
           <button data-chip-value="10" aria-pressed="true">10</button>
           <button data-bet-id="straight-19">19</button>
         </section>
@@ -164,19 +172,27 @@ describe("roulette fast normal placement", () => {
     )!;
     expect(balance.textContent).toBe("$90");
 
-    // The normal runtime bubble handler adopts the new plan in the same click
-    // task. Model that handoff before the queued microtask validates it.
-    setRouletteBetAuthority(
-      "round-1",
-      [
-        { betId: "straight-19", amount: 10 },
-        { betId: "straight-19", amount: 10 },
+    // This is the real runtime bubble reducer. Its local mirror may still point
+    // at the pre-drag source, but the capture intent must force the exact 19=$20
+    // canonical plan rather than independently rebuilding from that stale copy.
+    const staleRuntimeState: RouletteBetState = {
+      selectedChip: 10,
+      placements: [
+        { betId: "straight-20", amount: 10 },
       ],
-      4,
-      true,
+      previousRoundPlacements: [],
+    };
+    const adopted = placeRouletteBet(
+      staleRuntimeState,
+      "straight-19",
     );
+    expect(adopted.placements).toEqual([
+      { betId: "straight-19", amount: 10 },
+      { betId: "straight-19", amount: 10 },
+    ]);
 
     await Promise.resolve();
+    expect(balance.textContent).toBe("$90");
 
     // An older drag/poll response paints the previous $100 server balance after
     // the newer click. The newer $90 local reservation must win immediately.
@@ -185,14 +201,9 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
     expect(balance.textContent).toBe("$90");
 
-    // Even if the older write flips optimistic false, its higher balance must not
-    // overwrite the newer plan's reserved wallet value.
     setRouletteBetAuthority(
       "round-1",
-      [
-        { betId: "straight-19", amount: 10 },
-        { betId: "straight-19", amount: 10 },
-      ],
+      adopted.placements,
       5,
       false,
     );
@@ -201,8 +212,6 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
     expect(balance.textContent).toBe("$90");
 
-    // Once the matching server balance itself arrives, local display ownership
-    // can be released without changing the visible value.
     balance.textContent = "$90";
     await Promise.resolve();
     await Promise.resolve();

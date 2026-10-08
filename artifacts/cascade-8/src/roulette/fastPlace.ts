@@ -8,7 +8,12 @@ import {
 } from "./betAuthority";
 import {
   getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
 } from "./betAuthorityVisual";
+import {
+  isRouletteCapturedPlaceIntentPending,
+  registerRouletteCapturedPlaceIntent,
+} from "./capturedPlaceIntent";
 import {
   hasRouletteActiveExternalLatestMutation,
   registerRouletteExternalLatestMutation,
@@ -188,8 +193,6 @@ export function installRouletteFastPlace(
         pending.plan,
       );
 
-    // The server has caught up to this reservation. Once the matching plan is
-    // confirmed, release local display ownership back to the server balance.
     if (
       displayed === pending.balanceCents &&
       planMatches &&
@@ -199,8 +202,6 @@ export function installRouletteFastPlace(
       return;
     }
 
-    // A lower balance can only represent a newer local/server reservation. Do
-    // not resurrect an older, higher pending value over it.
     if (
       displayed !== null &&
       displayed < pending.balanceCents
@@ -209,8 +210,6 @@ export function installRouletteFastPlace(
       return;
     }
 
-    // Recovery/rejection returned authority to a different confirmed topology.
-    // In that case the local reservation did not survive and server balance wins.
     if (
       !planMatches &&
       !authority.optimistic
@@ -219,9 +218,6 @@ export function installRouletteFastPlace(
       return;
     }
 
-    // An older drag/poll/write response may repaint the pre-click server balance
-    // after a newer click. Local committed stake owns the display until the
-    // matching wager itself is confirmed or rejected.
     if (displayed !== pending.balanceCents) {
       renderBalance(
         app,
@@ -262,7 +258,9 @@ export function installRouletteFastPlace(
       );
       if (
         !cell ||
-        page.dataset.bettingLocked === "true"
+        page.dataset.phase !== "betting" ||
+        page.dataset.bettingLocked === "true" ||
+        panel.getAttribute("aria-disabled") === "true"
       ) {
         return;
       }
@@ -306,6 +304,22 @@ export function installRouletteFastPlace(
           hasMatchingActiveFastMutation,
         );
 
+      // Capture owns the user intent. Move canonical authority to the exact new
+      // topology before any runtime bubble handler can consult a stale mirror.
+      // placeRouletteBet consumes the same intent instead of adding the chip a
+      // second time.
+      const intentToken =
+        registerRouletteCapturedPlaceIntent(
+          betId,
+          plan,
+        );
+      setRouletteBetAuthority(
+        authority.roundId,
+        plan,
+        authority.revision,
+        true,
+      );
+
       const reservation: PendingVisibleBalance = {
         id: ++visibleBalanceSequence,
         roundId: authority.roundId,
@@ -321,10 +335,9 @@ export function installRouletteFastPlace(
         reservation.balanceCents,
       );
 
-      // On the serialized fallback path the runtime bubble handler must adopt
-      // this exact plan in the same event task. If the click was swallowed or
-      // rejected locally, release the visual reservation instead of lying about
-      // money that never became a wager.
+      // Serialized writes can wait behind an older drag barrier, but the local
+      // intent cannot. Verify after bubbling that runtime consumed this exact
+      // captured plan. If it did not, restore both topology and visible money.
       if (!canUseFast) {
         queueMicrotask(() => {
           if (
@@ -334,18 +347,18 @@ export function installRouletteFastPlace(
             return;
           }
 
-          const afterClick =
-            getRouletteBetAuthoritySnapshot();
-          const adopted =
-            afterClick.roundId === reservation.roundId &&
-            afterClick.bets !== null &&
-            sameBetTotals(
-              afterClick.bets,
-              reservation.plan,
-            );
-
-          if (!adopted) {
+          if (
+            isRouletteCapturedPlaceIntentPending(
+              intentToken,
+            )
+          ) {
             pendingVisibleBalance = null;
+            setRouletteBetAuthority(
+              authority.roundId!,
+              current,
+              authority.revision,
+              authority.optimistic,
+            );
             renderBalance(
               app,
               reservation.previousBalanceCents,
