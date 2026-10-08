@@ -8,7 +8,7 @@ import type {
   BlackjackServerActionRequest,
 } from "../../../cascade-8/src/blackjack/serverContract";
 import type { BlackjackShoe } from "../../../cascade-8/src/blackjack/shoe";
-import { parseBlackjackActionRequest } from "./routes";
+import { parseBlackjackActionRequest } from "./requestValidation";
 import {
   createBlackjackServerSession,
   transitionBlackjackServerSession,
