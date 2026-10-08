@@ -56,15 +56,19 @@ export function fisherYatesShuffle<T>(
     }
 
     const swapIndex = Math.floor(sample * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [
-      shuffled[swapIndex],
-      shuffled[index],
-    ];
+    const current = shuffled[index];
+    const swap = shuffled[swapIndex];
+
+    shuffled[index] = swap;
+    shuffled[swapIndex] = current;
   }
 
   return shuffled;
 }
 
+// Part 5A keeps the shuffle algorithm pure and injectable. The browser demo may
+// use Math.random for local-only visuals, but the authoritative backend must
+// provide the RNG/source when server shoe ownership is wired in later parts.
 export function createBlackjackShoe(
   random: BlackjackRandom = Math.random,
   deckCount = BLACKJACK_DECK_COUNT,
