@@ -1779,6 +1779,7 @@ export function mountRoulette(app: HTMLDivElement) {
             (bet) => ({
               ...bet,
             }),
+          ),
       };
       serverReservedStakeCents =
         serverBet.stakeCents;
