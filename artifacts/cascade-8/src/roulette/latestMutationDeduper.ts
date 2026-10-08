@@ -14,6 +14,9 @@ import {
   type RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
 
+const RUNTIME_MUTATION_PREFIX =
+  "roulette_gbet_";
+
 type PendingLatestMutation = {
   roundId: string;
   bets: RouletteBetPlacement[];
@@ -66,6 +69,47 @@ export function hasRouletteActiveExternalLatestMutation(
   return false;
 }
 
+export function selectRouletteRuntimeMutationBets(
+  roundId: string,
+  bets: readonly RouletteBetPlacement[],
+  idempotencyKey: string,
+) {
+  if (!idempotencyKey.startsWith(RUNTIME_MUTATION_PREFIX)) {
+    return cloneBets(bets);
+  }
+
+  const authority =
+    getRouletteBetAuthoritySnapshot();
+
+  if (
+    authority.roundId === roundId &&
+    authority.bets !== null
+  ) {
+    return cloneBets(authority.bets);
+  }
+
+  return cloneBets(bets);
+}
+
+export function discardRoulettePendingExternalLatestMutationIfSuperseded(
+  roundId: string,
+  bets: readonly RouletteBetPlacement[],
+) {
+  const pending = pendingLatestMutation;
+
+  if (!pending) return false;
+
+  if (
+    pending.roundId === roundId &&
+    sameBetTotals(pending.bets, bets)
+  ) {
+    return false;
+  }
+
+  pendingLatestMutation = null;
+  return true;
+}
+
 export function releaseRouletteFailedExternalLatestMutation(
   roundId: string,
   bets: readonly RouletteBetPlacement[],
@@ -102,6 +146,8 @@ export function registerRouletteExternalLatestMutation(
     promise,
   };
 
+  // A newer fast action supersedes the dedupe slot, while every active request
+  // remains tracked independently until its network promise settles.
   pendingLatestMutation = record;
   activeLatestMutations.add(record);
 
@@ -121,12 +167,13 @@ export function registerRouletteExternalLatestMutation(
   });
 
   void promise.finally(() => {
+    // Do not clear pendingLatestMutation here. The fast HTTP response can finish
+    // before a delayed runtime queue reaches the matching roulette_gbet job. The
+    // resolved/rejected promise must remain reusable until that runtime job
+    // consumes it or a later runtime topology proves it was superseded.
     activeLatestMutations.delete(record);
-    if (pendingLatestMutation === record) {
-      pendingLatestMutation = null;
-    }
   }).catch(() => {
-    // The caller owns the request error. This chain only clears tracking state.
+    // The caller owns the request error. This chain only clears active tracking.
   });
 }
 
@@ -166,10 +213,20 @@ export function installRouletteLatestMutationDeduper() {
     idempotencyKey,
     expectedRevision,
   ) {
+    // Runtime queue jobs are snapshots. Rebase them at actual send time onto the
+    // unified authority so a delayed pre-drag/pre-undo job cannot restore stale
+    // topology after a newer local action.
+    const effectiveBets =
+      selectRouletteRuntimeMutationBets(
+        roundId,
+        bets,
+        idempotencyKey,
+      );
+
     const sharedLatest =
       consumeMatchingRouletteExternalLatestMutation(
         roundId,
-        bets,
+        effectiveBets,
       );
 
     if (sharedLatest) {
@@ -177,7 +234,7 @@ export function installRouletteLatestMutationDeduper() {
         getRouletteBetAuthoritySnapshot();
       setRouletteBetAuthority(
         roundId,
-        bets,
+        effectiveBets,
         authority.roundId === roundId
           ? authority.revision
           : expectedRevision,
@@ -186,10 +243,21 @@ export function installRouletteLatestMutationDeduper() {
       return sharedLatest;
     }
 
+    if (idempotencyKey.startsWith(RUNTIME_MUTATION_PREFIX)) {
+      // The first runtime queue job after a fast registration is the canonical
+      // consumer opportunity. If its commit-time authority no longer matches the
+      // fast plan, that plan was superseded and must never be matched later by
+      // coincidence.
+      discardRoulettePendingExternalLatestMutationIfSuperseded(
+        roundId,
+        effectiveBets,
+      );
+    }
+
     return originalUpdate.call(
       this,
       roundId,
-      bets,
+      effectiveBets,
       idempotencyKey,
       expectedRevision,
     );
