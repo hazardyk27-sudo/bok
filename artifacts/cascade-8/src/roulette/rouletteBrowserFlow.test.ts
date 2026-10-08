@@ -1,8 +1,22 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, type Browser, type Page, type Route } from "@playwright/test";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from "@playwright/test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import { createServer, type ViteDevServer } from "vite";
 import { settleRouletteBets } from "./betRules";
 import {
@@ -110,14 +124,17 @@ async function chipState(page: Page, betId: string) {
 describe("roulette real browser wager lifecycle", () => {
   let vite: ViteDevServer;
   let browser: Browser;
+  let context: BrowserContext;
   let page: Page;
   let baseUrl = "";
-  let phase: RouletteGlobalTablePhase = "betting";
-  let roundId = "browser-round-1";
-  let globalBet: RouletteGlobalBetSnapshot | null = null;
-  let walletBalanceCents = 100_000_000;
-  let latestResponseDelayMs = 0;
-  const writes: WriteBody[] = [];
+
+  let phase: RouletteGlobalTablePhase;
+  let roundId: string;
+  let globalBet: RouletteGlobalBetSnapshot | null;
+  let walletBalanceCents: number;
+  let latestResponseDelayMs: number;
+  let normalResponseDelayMs: number;
+  let writes: WriteBody[];
 
   function tableSnapshot(): RouletteGlobalTableSnapshot {
     const now = Date.now();
@@ -189,24 +206,6 @@ describe("roulette real browser wager lifecycle", () => {
     await page.waitForTimeout(250);
   }
 
-  async function beginRound(
-    id: string,
-    resetWalletCents?: number,
-  ) {
-    roundId = id;
-    phase = "betting";
-    globalBet = null;
-    latestResponseDelayMs = 0;
-    if (resetWalletCents !== undefined) {
-      walletBalanceCents = resetWalletCents;
-    }
-    await forceStateRefresh();
-    await eventually(async () =>
-      (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
-      "false",
-    );
-  }
-
   async function waitForServerTotals(expected: Record<string, number>) {
     await eventually(() => {
       const actual = totals(globalBet?.bets ?? []);
@@ -221,6 +220,7 @@ describe("roulette real browser wager lifecycle", () => {
     route: Route,
     body: WriteBody,
     enforceRevision: boolean,
+    delayMs: number,
   ) {
     writes.push({
       ...body,
@@ -249,8 +249,6 @@ describe("roulette real browser wager lifecycle", () => {
       return;
     }
 
-    const delayMs = latestResponseDelayMs;
-    latestResponseDelayMs = 0;
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
@@ -259,14 +257,13 @@ describe("roulette real browser wager lifecycle", () => {
     const nextStakeCents = stakeCents(body.bets);
     walletBalanceCents += previousStakeCents - nextStakeCents;
 
-    const nextRevision = currentRevision + 1;
     globalBet = {
       id: `browser-bet-${roundId}`,
       roundId,
       bets: cloneBets(body.bets),
       stakeCents: nextStakeCents,
       payoutCents: 0,
-      revision: nextRevision,
+      revision: currentRevision + 1,
       settlement: null,
       settledAtMs: null,
       updatedAtMs: Date.now(),
@@ -305,14 +302,24 @@ describe("roulette real browser wager lifecycle", () => {
         ? { executablePath, headless: true }
         : { channel: "chrome", headless: true },
     );
-    const context = await browser.newContext({
+  }, 45_000);
+
+  beforeEach(async () => {
+    phase = "betting";
+    roundId = "browser-round-1";
+    globalBet = null;
+    walletBalanceCents = 100_000_000;
+    latestResponseDelayMs = 0;
+    normalResponseDelayMs = 0;
+    writes = [];
+
+    context = await browser.newContext({
       viewport: { width: 915, height: 412 },
       screen: { width: 915, height: 412 },
     });
     page = await context.newPage();
 
     await page.route("**/api/roulette/state", async (route) => {
-      const table = tableSnapshot();
       const responseGlobalBet = globalBet
         ? {
             ...globalBet,
@@ -337,7 +344,7 @@ describe("roulette real browser wager lifecycle", () => {
         body: JSON.stringify({
           simulationVersion: ROULETTE_SIMULATION_VERSION,
           serverTimeMs: Date.now(),
-          globalTable: table,
+          globalTable: tableSnapshot(),
           recentResults: [],
           globalBet: responseGlobalBet,
           wallet: {
@@ -350,22 +357,29 @@ describe("roulette real browser wager lifecycle", () => {
 
     await page.route("**/api/roulette/global-bets/latest", async (route) => {
       const body = route.request().postDataJSON() as WriteBody;
-      await fulfillWrite(route, body, false);
+      const delay = latestResponseDelayMs;
+      latestResponseDelayMs = 0;
+      await fulfillWrite(route, body, false, delay);
     });
 
     await page.route("**/api/roulette/global-bets", async (route) => {
       const body = route.request().postDataJSON() as WriteBody;
-      await fulfillWrite(route, body, true);
+      const delay = normalResponseDelayMs;
+      normalResponseDelayMs = 0;
+      await fulfillWrite(route, body, true, delay);
     });
 
     await page.goto(`${baseUrl}/roulette`);
     await page.locator(".roulette-page").waitFor({ state: "visible" });
-    await eventually(() => globalBet === null);
     await eventually(async () =>
       (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
       "false",
     );
-  }, 45_000);
+  }, 20_000);
+
+  afterEach(async () => {
+    await context?.close();
+  });
 
   afterAll(async () => {
     await browser?.close();
@@ -373,9 +387,10 @@ describe("roulette real browser wager lifecycle", () => {
   });
 
   it(
-    "reserves wallet immediately and never resurrects 20 after moving to 19 and increasing there",
+    "reserves wallet immediately while an older drag write is still in flight and never resurrects 20",
     async () => {
-      await beginRound("browser-user-drag-wallet", 87_000);
+      walletBalanceCents = 87_000;
+      await forceStateRefresh();
       const balance = page.locator("[data-wallet-balance]").first();
       await eventually(async () => (await balance.textContent()) === "$870");
 
@@ -384,30 +399,26 @@ describe("roulette real browser wager lifecycle", () => {
 
       latestResponseDelayMs = 350;
       await page.locator('[data-bet-id="straight-20"]').click();
-
-      // This assertion intentionally happens before the delayed server response.
-      // The player's wallet must reserve the stake in the same click task.
       expect(await balance.textContent()).toBe("$860");
       expect(globalBet).toBeNull();
 
       await waitForServerTotals({ "straight-20": 10 });
       await page.waitForTimeout(100);
       expect(await balance.textContent()).toBe("$860");
-      expect(await chipState(page, "straight-20")).toMatchObject({ amount: 10 });
 
+      normalResponseDelayMs = 350;
       await dragChip(page, "straight-20", "straight-19");
-      await waitForServerTotals({ "straight-19": 10 });
       await eventually(async () =>
         (await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()) === 0,
       );
       expect(await chipState(page, "straight-19")).toMatchObject({ amount: 10 });
-      expect(await balance.textContent()).toBe("$860");
 
-      await page.waitForTimeout(380);
-      latestResponseDelayMs = 350;
+      // Do not wait for the drag HTTP response. This is the reported race:
+      // increase 19 while the previous 20 -> 19 write is still travelling.
+      await page.waitForTimeout(330);
       await page.locator('[data-bet-id="straight-19"]').click();
-
       expect(await balance.textContent()).toBe("$850");
+
       await waitForServerTotals({ "straight-19": 20 });
       await page.waitForTimeout(100);
       expect(await balance.textContent()).toBe("$850");
@@ -439,7 +450,6 @@ describe("roulette real browser wager lifecycle", () => {
   it(
     "places, repeatedly moves, reuses the freed source, doubles by value tier, survives verify/spin, and preserves a $1000 board",
     async () => {
-      await beginRound("browser-round-1", 10_000_000);
       const chip10 = page.locator('.roulette-chip-option[data-chip-value="10"]:visible').first();
       await chip10.click();
       await page.locator('[data-bet-id="straight-24"]').click();
@@ -522,7 +532,15 @@ describe("roulette real browser wager lifecycle", () => {
         "settled",
       );
 
-      await beginRound("browser-round-2", 10_000_000);
+      roundId = "browser-round-2";
+      phase = "betting";
+      globalBet = null;
+      await forceStateRefresh();
+      await eventually(async () =>
+        (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
+        "false",
+      );
+
       const chip100 = page.locator('.roulette-chip-option[data-chip-value="100"]:visible').first();
       await chip100.click();
       await page.locator('[data-bet-id="straight-30"]').click();
@@ -541,7 +559,15 @@ describe("roulette real browser wager lifecycle", () => {
         "settled",
       );
 
-      await beginRound("browser-round-3", 10_000_000);
+      roundId = "browser-round-3";
+      phase = "betting";
+      globalBet = null;
+      await forceStateRefresh();
+      await eventually(async () =>
+        (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
+        "false",
+      );
+
       await page.locator('.roulette-chip-option[data-chip-value="100"]:visible').first().click();
       for (let number = 1; number <= 10; number += 1) {
         await page.locator(`[data-bet-id="straight-${number}"]`).click();

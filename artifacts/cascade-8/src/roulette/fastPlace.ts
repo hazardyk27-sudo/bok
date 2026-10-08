@@ -1,5 +1,6 @@
-import type {
-  RouletteBetPlacement,
+import {
+  getRouletteBetTotals,
+  type RouletteBetPlacement,
 } from "./betState";
 import {
   confirmRouletteExternalLatestMutation,
@@ -113,6 +114,34 @@ function readDisplayedBalanceCents(
   );
 }
 
+function sameBetTotals(
+  left: readonly RouletteBetPlacement[],
+  right: readonly RouletteBetPlacement[],
+) {
+  const a = getRouletteBetTotals(left);
+  const b = getRouletteBetTotals(right);
+  const keys = new Set([
+    ...Object.keys(a),
+    ...Object.keys(b),
+  ]);
+
+  for (const key of keys) {
+    if ((a[key] ?? 0) !== (b[key] ?? 0)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+type PendingVisibleBalance = {
+  id: number;
+  roundId: string;
+  plan: RouletteBetPlacement[];
+  balanceCents: number;
+  previousBalanceCents: number;
+};
+
 export function installRouletteFastPlace(
   app: HTMLDivElement,
 ) {
@@ -133,31 +162,70 @@ export function installRouletteFastPlace(
 
   panel.dataset.fastPlaceInstalled = "true";
 
-  let pendingVisibleBalanceCents: number | null = null;
+  let pendingVisibleBalance: PendingVisibleBalance | null = null;
+  let visibleBalanceSequence = 0;
   let balanceReconcileQueued = false;
 
   const reconcilePendingBalance = () => {
     balanceReconcileQueued = false;
-    if (pendingVisibleBalanceCents === null) return;
+    const pending = pendingVisibleBalance;
+    if (!pending) return;
 
-    const authority =
-      getRouletteBetAuthoritySnapshot();
-
-    // Once the authoritative write/recovery has completed, server balance owns
-    // the display again. Until then, a background state poll is not allowed to
-    // overwrite the stake the player already committed locally.
-    if (!authority.optimistic) {
-      pendingVisibleBalanceCents = null;
+    if (page.dataset.phase === "settled") {
+      pendingVisibleBalance = null;
       return;
     }
 
+    const authority =
+      getRouletteBetAuthoritySnapshot();
+    const displayed =
+      readDisplayedBalanceCents(app);
+    const planMatches =
+      authority.roundId === pending.roundId &&
+      authority.bets !== null &&
+      sameBetTotals(
+        authority.bets,
+        pending.plan,
+      );
+
+    // The server has caught up to this reservation. Once the matching plan is
+    // confirmed, release local display ownership back to the server balance.
     if (
-      readDisplayedBalanceCents(app) !==
-      pendingVisibleBalanceCents
+      displayed === pending.balanceCents &&
+      planMatches &&
+      !authority.optimistic
     ) {
+      pendingVisibleBalance = null;
+      return;
+    }
+
+    // A lower balance can only represent a newer local/server reservation. Do
+    // not resurrect an older, higher pending value over it.
+    if (
+      displayed !== null &&
+      displayed < pending.balanceCents
+    ) {
+      pendingVisibleBalance = null;
+      return;
+    }
+
+    // Recovery/rejection returned authority to a different confirmed topology.
+    // In that case the local reservation did not survive and server balance wins.
+    if (
+      !planMatches &&
+      !authority.optimistic
+    ) {
+      pendingVisibleBalance = null;
+      return;
+    }
+
+    // An older drag/poll/write response may repaint the pre-click server balance
+    // after a newer click. Local committed stake owns the display until the
+    // matching wager itself is confirmed or rejected.
+    if (displayed !== pending.balanceCents) {
       renderBalance(
         app,
-        pendingVisibleBalanceCents,
+        pending.balanceCents,
       );
     }
   };
@@ -221,37 +289,72 @@ export function installRouletteFastPlace(
         return;
       }
 
-      // Wallet acknowledgement belongs to the click itself, not to network RTT.
-      // Reserve the visible amount in this task even when drag/undo/etc. forces
-      // the actual write onto the serialized path.
-      pendingVisibleBalanceCents =
-        displayedBalanceCents - amount * 100;
-      renderBalance(
-        app,
-        pendingVisibleBalanceCents,
-      );
-
-      const hasMatchingActiveFastMutation =
-        hasRouletteActiveExternalLatestMutation(
-          authority.roundId,
-          current,
-        );
-
-      if (
-        !canRouletteUseFastPlace(
-          authority.optimistic,
-          hasMatchingActiveFastMutation,
-        )
-      ) {
-        return;
-      }
-
       const plan =
         addRoulettePlacementForFastWrite(
           current,
           betId,
           amount,
         );
+      const hasMatchingActiveFastMutation =
+        hasRouletteActiveExternalLatestMutation(
+          authority.roundId,
+          current,
+        );
+      const canUseFast =
+        canRouletteUseFastPlace(
+          authority.optimistic,
+          hasMatchingActiveFastMutation,
+        );
+
+      const reservation: PendingVisibleBalance = {
+        id: ++visibleBalanceSequence,
+        roundId: authority.roundId,
+        plan: plan.map((bet) => ({ ...bet })),
+        balanceCents:
+          displayedBalanceCents - amount * 100,
+        previousBalanceCents:
+          displayedBalanceCents,
+      };
+      pendingVisibleBalance = reservation;
+      renderBalance(
+        app,
+        reservation.balanceCents,
+      );
+
+      // On the serialized fallback path the runtime bubble handler must adopt
+      // this exact plan in the same event task. If the click was swallowed or
+      // rejected locally, release the visual reservation instead of lying about
+      // money that never became a wager.
+      if (!canUseFast) {
+        queueMicrotask(() => {
+          if (
+            pendingVisibleBalance?.id !==
+            reservation.id
+          ) {
+            return;
+          }
+
+          const afterClick =
+            getRouletteBetAuthoritySnapshot();
+          const adopted =
+            afterClick.roundId === reservation.roundId &&
+            afterClick.bets !== null &&
+            sameBetTotals(
+              afterClick.bets,
+              reservation.plan,
+            );
+
+          if (!adopted) {
+            pendingVisibleBalance = null;
+            renderBalance(
+              app,
+              reservation.previousBalanceCents,
+            );
+          }
+        });
+        return;
+      }
+
       const sequence =
         reserveRouletteExternalLatestMutation();
       const idempotencyKey =
@@ -282,8 +385,12 @@ export function installRouletteFastPlace(
               sequence,
             );
 
-          if (stillCurrent) {
-            pendingVisibleBalanceCents = null;
+          if (
+            stillCurrent &&
+            pendingVisibleBalance?.id ===
+              reservation.id
+          ) {
+            pendingVisibleBalance = null;
             renderBalance(
               app,
               response.balanceCents,
@@ -299,9 +406,6 @@ export function installRouletteFastPlace(
       );
 
       void request.catch((error) => {
-        // The runtime bubble handler consumes the same promise and performs the
-        // authoritative bootstrap recovery. The balance guard keeps the local
-        // reservation only while authority remains optimistic.
         console.error(
           "[roulette] fast place sync failed",
           error,
