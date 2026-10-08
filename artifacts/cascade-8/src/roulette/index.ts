@@ -6,6 +6,7 @@ import { installRouletteBetAuthority } from "./betAuthority";
 import { installRouletteFastDouble } from "./fastDouble";
 import { installRouletteLatestMutationDeduper } from "./latestMutationDeduper";
 import { installRouletteChipDragV6 } from "./chipDragV6";
+import { installRouletteAuthorityBetDomGuard } from "./authorityBetDom";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
 import "./verification.css";
 import "./chipFeedback.css";
@@ -33,16 +34,21 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
 
-  // The visual installer owns tray/mobile chip decoration and remains a safety
-  // normalizer for canonical placed-chip nodes; it is not a second color source.
+  // One physical casino-chip face is shared by tray, mobile picker, table and
+  // drag. Aggregate table amounts only change the printed value/tier.
   installRouletteChipVisuals(app);
+
+  // During betting, authority topology also owns the placed-chip DOM. If an old
+  // runtime/poll render attempts to repaint a stale source cell, reconciliation
+  // occurs in the same microtask before that stale topology reaches paint.
+  installRouletteAuthorityBetDomGuard(app);
 
   // x2 stamps its one network request at click time. The runtime still performs
   // the normal optimistic reducer/render, but its matching updateGlobalBet call
   // shares the already-started request through the deduper above.
   installRouletteFastDouble(app);
 
-  // Drag is input-only: one optimistic render at drop, then one serialized
-  // authority write. No polling loop, DOM protector, or secondary drag writer.
+  // Drag updates canonical authority at pointer-up and starts its write
+  // immediately; the short snap duration is visual only.
   installRouletteChipDragV6(app);
 }

@@ -77,35 +77,16 @@ export function getRouletteChipPalette(
   ];
 }
 
+/**
+ * Every visible wager is one physical chip face. Aggregate table amounts are
+ * represented by the number printed on that face, never by a visual stack.
+ */
 export function getRouletteChipStackDepth(
   amount: number,
 ) {
-  if (
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
-    ROULETTE_CHIP_VALUES.includes(amount)
-  ) {
-    return 1;
-  }
-
-  const tierFloor =
-    amount >= 5_000
-      ? 5_000
-      : amount >= 2_000
-        ? 2_000
-        : amount >= 500
-          ? 500
-          : amount >= 100
-            ? 100
-            : amount >= 50
-              ? 50
-              : 10;
-  const estimatedChips = Math.max(
-    2,
-    Math.ceil(amount / tierFloor),
-  );
-
-  return Math.min(3, estimatedChips);
+  return Number.isFinite(amount) && amount > 0
+    ? 1
+    : 0;
 }
 
 export function applyRouletteChipVisualState(
@@ -166,12 +147,8 @@ const LEGACY_SOURCE_MIRROR_PROPERTIES = [
 ] as const;
 
 /**
- * Placed-chip visuals have one authority: aggregate wager amount.
- *
- * The old runtime still emits legacy `chip-*` classes and --chip-* variables,
- * and old source-mirror revisions copied denomination styles inline. Strip both
- * before applying the canonical amount tier so a $20 wager can never inherit
- * the historic blue $10 face again.
+ * Placed-chip visuals have one authority: aggregate wager amount. Strip every
+ * historic denomination/source-mirror face before applying the canonical face.
  */
 export function clearRouletteLegacyPlacedChipFace(
   element: HTMLElement,
@@ -223,6 +200,17 @@ function anchorPlacedChip(
   setImportantStyle(element, "max-height", "calc(100% - 6px)");
 }
 
+function syncChipValueLabel(
+  label: HTMLElement,
+  amount: number,
+) {
+  label.classList.add(
+    "roulette-chip-face-value",
+  );
+  label.textContent =
+    formatRouletteAmount(amount);
+}
+
 export function syncRoulettePlacedChipVisual(
   element: HTMLElement,
   amount: number,
@@ -233,9 +221,8 @@ export function syncRoulettePlacedChipVisual(
     return false;
   }
 
-  element.dataset.stackDepth = String(
-    getRouletteChipStackDepth(amount),
-  );
+  // One physical chip everywhere. The amount itself carries aggregate meaning.
+  delete element.dataset.stackDepth;
   element.dataset.canonicalChipFace = "true";
   anchorPlacedChip(element);
   return true;
@@ -248,6 +235,15 @@ function decorateChipElement(
 ) {
   if (placed) {
     syncRoulettePlacedChipVisual(element, amount);
+    element
+      .querySelectorAll<HTMLElement>(
+        ":scope > .roulette-placed-chip__value, :scope > .roulette-placed-chip__suffix",
+      )
+      .forEach((label) => {
+        label.classList.add(
+          "roulette-chip-face-value",
+        );
+      });
     return;
   }
 
@@ -259,7 +255,7 @@ function decorateChipElement(
     ":scope > span",
   );
   if (label) {
-    label.textContent = formatRouletteAmount(amount);
+    syncChipValueLabel(label, amount);
   }
 }
 
@@ -286,7 +282,7 @@ function decorateMobileChipToggle(
     "[data-mobile-selected-chip]",
   );
   if (label) {
-    label.textContent = formatRouletteAmount(amount);
+    syncChipValueLabel(label, amount);
   }
 }
 
@@ -396,9 +392,6 @@ export function installRouletteChipVisuals(
     });
   });
 
-  // Runtime may replace several placed-chip nodes in one render or mutate an
-  // existing chip amount during drag/x2. One observer batch is canonicalized
-  // once; no denomination/source mirror is allowed to own the placed face.
   const observer = new MutationObserver((records) => {
     if (!records.some(recordNeedsChipDecoration)) return;
     decorateRouletteChips(app);
