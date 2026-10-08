@@ -125,12 +125,11 @@ export function buildBlackjackCardAnimationPlan(
   const steps: BlackjackCardAnimationStep[] = [];
 
   if (action === "deal" && previous === null) {
+    const initialDealCount = next.hands.length * 2 + 2;
     initialDealCards(next).forEach((card, order) => {
       steps.push({
         cardId: card.id,
-        kind: order >= Math.max(0, next.hands.length * 2 + 2)
-          ? "dealerDraw"
-          : "deal",
+        kind: order >= initialDealCount ? "dealerDraw" : "deal",
         order,
         delayMs: order * DEAL_GAP_MS,
       });
@@ -144,19 +143,6 @@ export function buildBlackjackCardAnimationPlan(
   }
 
   let order = 0;
-  if (shouldRevealHoleCard(previous, next)) {
-    const hole = next.dealer.cards[1];
-    if (hole) {
-      steps.push({
-        cardId: hole.id,
-        kind: "holeReveal",
-        order,
-        delayMs: 0,
-      });
-      order += 1;
-    }
-  }
-
   const playerKind: BlackjackCardAnimationKind = action === "split"
     ? "splitDraw"
     : "playerDraw";
@@ -169,6 +155,19 @@ export function buildBlackjackCardAnimationPlan(
       delayMs: order * ACTION_GAP_MS,
     });
     order += 1;
+  }
+
+  if (shouldRevealHoleCard(previous, next)) {
+    const hole = next.dealer.cards[1];
+    if (hole) {
+      steps.push({
+        cardId: hole.id,
+        kind: "holeReveal",
+        order,
+        delayMs: order * ACTION_GAP_MS,
+      });
+      order += 1;
+    }
   }
 
   for (const card of newDealerCards(previous, next)) {
@@ -203,19 +202,35 @@ function cardElements(root: HTMLElement): Map<string, HTMLElement> {
   return result;
 }
 
+function sourceCenter(root: HTMLElement): { x: number; y: number } | null {
+  const candidates = [
+    root.querySelector<HTMLElement>(".bj-shoe__deck"),
+    root.querySelector<HTMLElement>(".bj-shoe"),
+    root.querySelector<HTMLElement>(".bj-dealer-zone"),
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const rect = candidate.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    return {
+      x: rect.left + rect.width * 0.5,
+      y: rect.top + rect.height * 0.5,
+    };
+  }
+
+  return null;
+}
+
 export function animateBlackjackCardPlan(
   root: HTMLElement,
   plan: BlackjackCardAnimationPlan,
 ): void {
   if (plan.steps.length === 0 || reducedMotionPreferred()) return;
 
-  const shoe = root.querySelector<HTMLElement>(".bj-shoe__deck")
-    ?? root.querySelector<HTMLElement>(".bj-shoe");
-  if (!shoe) return;
+  const source = sourceCenter(root);
+  if (!source) return;
 
-  const shoeRect = shoe.getBoundingClientRect();
-  const sourceX = shoeRect.left + shoeRect.width * 0.5;
-  const sourceY = shoeRect.top + shoeRect.height * 0.5;
   const elements = cardElements(root);
   const blackjackRoot = root.querySelector<HTMLElement>(".bj-root");
 
@@ -230,7 +245,6 @@ export function animateBlackjackCardPlan(
     if (step.kind === "holeReveal") {
       const animation = card.animate(
         [
-          { scale: "1 1", filter: "brightness(1)" },
           { scale: "0.08 1", filter: "brightness(0.72)" },
           { scale: "1 1", filter: "brightness(1.08)" },
           { scale: "1 1", filter: "brightness(1)" },
@@ -238,19 +252,23 @@ export function animateBlackjackCardPlan(
         {
           duration: REVEAL_DURATION_MS,
           delay: step.delayMs,
-          easing: "ease-in-out",
+          easing: "ease-out",
           fill: "backwards",
         },
       );
-      animation.addEventListener("finish", () => card.classList.remove("is-card-animating"), { once: true });
+      animation.addEventListener(
+        "finish",
+        () => card.classList.remove("is-card-animating"),
+        { once: true },
+      );
       continue;
     }
 
     const targetRect = card.getBoundingClientRect();
     const targetX = targetRect.left + targetRect.width * 0.5;
     const targetY = targetRect.top + targetRect.height * 0.5;
-    const deltaX = sourceX - targetX;
-    const deltaY = sourceY - targetY;
+    const deltaX = source.x - targetX;
+    const deltaY = source.y - targetY;
 
     const animation = card.animate(
       [
@@ -274,7 +292,11 @@ export function animateBlackjackCardPlan(
         fill: "backwards",
       },
     );
-    animation.addEventListener("finish", () => card.classList.remove("is-card-animating"), { once: true });
+    animation.addEventListener(
+      "finish",
+      () => card.classList.remove("is-card-animating"),
+      { once: true },
+    );
   }
 
   if (blackjackRoot) {
