@@ -171,6 +171,16 @@ export function installRouletteFastPlace(
         return;
       }
 
+      // Visual wallet reservation belongs to the user action, not to the network
+      // path. Deduct before deciding whether this click can use the fast endpoint.
+      // If drag/undo/etc. currently owns optimistic authority, the runtime will
+      // serialize the write, but the player still sees the stake leave the wallet
+      // in this same click task instead of waiting for server ping/queue latency.
+      renderBalance(
+        app,
+        displayedBalanceCents - amount * 100,
+      );
+
       const hasMatchingActiveFastMutation =
         hasRouletteActiveExternalLatestMutation(
           authority.roundId,
@@ -199,14 +209,6 @@ export function installRouletteFastPlace(
         reserveRouletteExternalLatestMutation();
       const idempotencyKey =
         `roulette_fast_place_${crypto.randomUUID().replaceAll("-", "")}`;
-
-      // UX acknowledgement is synchronous: reserve the visible balance before
-      // the browser gets to the next frame. Server confirmation still remains
-      // authoritative and can recover/reject through the shared runtime promise.
-      renderBalance(
-        app,
-        displayedBalanceCents - amount * 100,
-      );
 
       // Most important deadline invariant: start the HTTP request in capture
       // phase, before the runtime bubble handler and before any client write queue.
