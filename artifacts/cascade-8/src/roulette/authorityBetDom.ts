@@ -55,10 +55,7 @@ export function renderRouletteBetTopology(
         createRouletteCanonicalPlacedChip(amount);
 
       chips.slice(1).forEach((extra) => extra.remove());
-
-      if (!sameRenderedAmount(chip, amount)) {
-        syncRouletteCanonicalChipFace(chip, amount);
-      }
+      syncRouletteCanonicalChipFace(chip, amount);
 
       cell.classList.add("has-bet");
       if (!chip.isConnected || chip.parentElement !== cell) {
