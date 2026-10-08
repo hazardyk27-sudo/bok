@@ -13,6 +13,8 @@ import {
   type BlackjackSeatState,
 } from "./seatState";
 
+export const BLACKJACK_MAX_HANDS_PER_SEAT = 4;
+
 export type BlackjackRoundPhase = "playerTurns" | "dealerTurn" | "complete";
 
 export type BlackjackRoundHandStatus =
@@ -28,6 +30,7 @@ export type BlackjackRoundHand = {
   seatId: BlackjackSeatId;
   handIndex: number;
   splitDepth: number;
+  splitFromAces: boolean;
   wager: number;
   cards: BlackjackCard[];
   status: BlackjackRoundHandStatus;
@@ -90,7 +93,7 @@ export function getBlackjackRoundReadiness(
   };
 }
 
-function getActiveRoundHand(
+export function getActiveBlackjackRoundHand(
   round: BlackjackRoundState,
 ): BlackjackRoundHand | null {
   if (round.activeHandId === null) {
@@ -257,8 +260,12 @@ export function hitBlackjackHand(
     return { round, shoe };
   }
 
-  const activeHand = getActiveRoundHand(round);
-  if (!activeHand || activeHand.status !== "playing") {
+  const activeHand = getActiveBlackjackRoundHand(round);
+  if (
+    !activeHand ||
+    activeHand.status !== "playing" ||
+    activeHand.splitFromAces
+  ) {
     return { round, shoe };
   }
 
@@ -294,7 +301,7 @@ export function standBlackjackHand(
     return { round, shoe };
   }
 
-  const activeHand = getActiveRoundHand(round);
+  const activeHand = getActiveBlackjackRoundHand(round);
   if (!activeHand || activeHand.status !== "playing") {
     return { round, shoe };
   }
@@ -317,14 +324,14 @@ export function canDoubleBlackjackHand(round: BlackjackRoundState): boolean {
     return false;
   }
 
-  const activeHand = getActiveRoundHand(round);
+  const activeHand = getActiveBlackjackRoundHand(round);
 
   return Boolean(
     activeHand &&
       activeHand.status === "playing" &&
       activeHand.cards.length === 2 &&
       !activeHand.doubled &&
-      activeHand.splitDepth === 0,
+      !activeHand.splitFromAces,
   );
 }
 
@@ -336,7 +343,7 @@ export function doubleBlackjackHand(
     return { round, shoe };
   }
 
-  const activeHand = getActiveRoundHand(round);
+  const activeHand = getActiveBlackjackRoundHand(round);
   if (!activeHand) {
     return { round, shoe };
   }
@@ -373,13 +380,13 @@ export function canSplitBlackjackHand(round: BlackjackRoundState): boolean {
     return false;
   }
 
-  const activeHand = getActiveRoundHand(round);
+  const activeHand = getActiveBlackjackRoundHand(round);
   if (
     !activeHand ||
     activeHand.status !== "playing" ||
     activeHand.cards.length !== 2 ||
     activeHand.doubled ||
-    activeHand.splitDepth !== 0
+    activeHand.splitFromAces
   ) {
     return false;
   }
@@ -387,7 +394,7 @@ export function canSplitBlackjackHand(round: BlackjackRoundState): boolean {
   const seatHandCount = round.hands.filter(
     (hand) => hand.seatId === activeHand.seatId,
   ).length;
-  if (seatHandCount !== 1) {
+  if (seatHandCount >= BLACKJACK_MAX_HANDS_PER_SEAT) {
     return false;
   }
 
@@ -399,9 +406,33 @@ export function canSplitBlackjackHand(round: BlackjackRoundState): boolean {
   return getBlackjackRankValue(first.rank) === getBlackjackRankValue(second.rank);
 }
 
-function splitHandStatus(cards: readonly BlackjackCard[]): BlackjackRoundHandStatus {
+function splitHandStatus(
+  cards: readonly BlackjackCard[],
+  splitFromAces: boolean,
+): BlackjackRoundHandStatus {
+  if (splitFromAces) {
+    return "stood";
+  }
+
   const value = evaluateBlackjackHand(cards);
   return value.total === 21 ? "stood" : "playing";
+}
+
+function reindexSeatHands(
+  hands: readonly BlackjackRoundHand[],
+  seatId: BlackjackSeatId,
+): BlackjackRoundHand[] {
+  let handIndex = 0;
+
+  return hands.map((hand) => {
+    if (hand.seatId !== seatId) {
+      return hand;
+    }
+
+    const reindexed = { ...hand, handIndex };
+    handIndex += 1;
+    return reindexed;
+  });
 }
 
 export function splitBlackjackHand(
@@ -412,7 +443,7 @@ export function splitBlackjackHand(
     return { round, shoe };
   }
 
-  const activeHand = getActiveRoundHand(round);
+  const activeHand = getActiveBlackjackRoundHand(round);
   if (!activeHand) {
     return { round, shoe };
   }
@@ -426,14 +457,16 @@ export function splitBlackjackHand(
   const secondDraw = drawBlackjackCard(firstDraw.shoe);
   const firstCards = [firstCard, firstDraw.card];
   const secondCards = [secondCard, secondDraw.card];
+  const splittingAces = firstCard.rank === "A" && secondCard.rank === "A";
+  const splitDepth = activeHand.splitDepth + 1;
 
   const firstHand: BlackjackRoundHand = {
     ...activeHand,
-    handId: `seat-${activeHand.seatId}-hand-0`,
-    handIndex: 0,
-    splitDepth: 1,
+    handId: `${activeHand.handId}-L`,
+    splitDepth,
+    splitFromAces: splittingAces,
     cards: firstCards,
-    status: splitHandStatus(firstCards),
+    status: splitHandStatus(firstCards, splittingAces),
     doubled: false,
     result: null,
     returnAmount: null,
@@ -441,46 +474,49 @@ export function splitBlackjackHand(
   };
   const secondHand: BlackjackRoundHand = {
     ...activeHand,
-    handId: `seat-${activeHand.seatId}-hand-1`,
-    handIndex: 1,
-    splitDepth: 1,
+    handId: `${activeHand.handId}-R`,
+    splitDepth,
+    splitFromAces: splittingAces,
     cards: secondCards,
-    status: splitHandStatus(secondCards),
+    status: splitHandStatus(secondCards, splittingAces),
     doubled: false,
     result: null,
     returnAmount: null,
     netAmount: null,
   };
 
-  const handIndex = round.hands.findIndex(
+  const activeIndex = round.hands.findIndex(
     (hand) => hand.handId === activeHand.handId,
   );
-  const hands = [
-    ...round.hands.slice(0, handIndex),
+  const insertedHands = [
+    ...round.hands.slice(0, activeIndex),
     firstHand,
     secondHand,
-    ...round.hands.slice(handIndex + 1),
+    ...round.hands.slice(activeIndex + 1),
   ];
+  const hands = reindexSeatHands(insertedHands, activeHand.seatId);
   const nextRound: BlackjackRoundState = { ...round, hands };
+  const nextFirst = hands.find((hand) => hand.handId === firstHand.handId) ?? firstHand;
+  const nextSecond = hands.find((hand) => hand.handId === secondHand.handId) ?? secondHand;
 
-  if (firstHand.status === "playing") {
+  if (nextFirst.status === "playing") {
     return {
       shoe: secondDraw.shoe,
-      round: withActiveHand(nextRound, firstHand.handId),
+      round: withActiveHand(nextRound, nextFirst.handId),
     };
   }
 
-  if (secondHand.status === "playing") {
+  if (nextSecond.status === "playing") {
     return {
       shoe: secondDraw.shoe,
-      round: withActiveHand(nextRound, secondHand.handId),
+      round: withActiveHand(nextRound, nextSecond.handId),
     };
   }
 
   return advanceAfterFinishedHand(
     nextRound,
     secondDraw.shoe,
-    secondHand.handId,
+    nextSecond.handId,
   );
 }
 
@@ -511,6 +547,7 @@ export function startBlackjackRound(
       seatId,
       handIndex: 0,
       splitDepth: 0,
+      splitFromAces: false,
       wager: seat.bet,
       cards: [],
       status: "playing",
