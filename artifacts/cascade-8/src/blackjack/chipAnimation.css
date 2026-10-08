@@ -1,3 +1,5 @@
+@import "./polish.css";
+
 .bj-chip-flight {
   position: absolute;
   z-index: 86;
