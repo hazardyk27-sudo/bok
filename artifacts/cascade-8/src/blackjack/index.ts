@@ -12,12 +12,17 @@ import {
   BLACKJACK_MAX_HANDS_PER_SEAT,
   canDoubleBlackjackHand,
   canSplitBlackjackHand,
+  canTakeBlackjackInsurance,
+  declineBlackjackInsurance,
   doubleBlackjackHand,
+  getActiveBlackjackRoundHand,
+  getBlackjackInsuranceMaxWager,
   getBlackjackRoundReadiness,
   hitBlackjackHand,
   splitBlackjackHand,
   standBlackjackHand,
   startBlackjackRound,
+  takeBlackjackInsurance,
   type BlackjackRoundHand,
   type BlackjackRoundState,
 } from "./roundState";
@@ -190,6 +195,22 @@ function roundHandStateCopy(hand: BlackjackRoundHand, active: boolean) {
   return active ? "YOUR TURN" : "IN ROUND";
 }
 
+function insuranceCopy(hand: BlackjackRoundHand) {
+  if (hand.insuranceDecision !== "taken") {
+    return "";
+  }
+
+  if (hand.insuranceNetAmount === null) {
+    return `INSURANCE $${formatReturnAmount(hand.insuranceWager).replace("$", "")}`;
+  }
+
+  if (hand.insuranceNetAmount > 0) {
+    return `INSURANCE WIN +${formatReturnAmount(hand.insuranceNetAmount)}`;
+  }
+
+  return `INSURANCE LOST ${formatReturnAmount(hand.insuranceWager)}`;
+}
+
 function roundHandClasses(hand: BlackjackRoundHand, active: boolean) {
   const resultClass = hand.result ? ` is-result-${hand.result}` : "";
   const actionClass = hand.status === "bust" ? " is-bust" : hand.status === "stood" ? " is-stood" : "";
@@ -197,6 +218,11 @@ function roundHandClasses(hand: BlackjackRoundHand, active: boolean) {
   const blackjackClass = hand.status === "blackjack" ? " is-blackjack" : "";
   const aceSplitClass = hand.splitFromAces ? " is-ace-split" : "";
   return `${active ? " is-active-subhand" : ""}${blackjackClass}${actionClass}${doubledClass}${aceSplitClass}${resultClass}`;
+}
+
+function renderInsuranceBadge(hand: BlackjackRoundHand) {
+  const copy = insuranceCopy(hand);
+  return copy ? `<div class="bj-hand-insurance">${copy}</div>` : "";
 }
 
 function renderSingleRoundHand(
@@ -213,6 +239,7 @@ function renderSingleRoundHand(
       </div>
       ${renderWagerChips(seat)}
       <div class="bj-seat__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
+      ${renderInsuranceBadge(hand)}
       <div class="bj-seat__badge bj-seat__round-badge">
         <span class="bj-seat__person" aria-hidden="true"></span>
         <span><strong>Seat ${seat.id}</strong><small>${roundHandStateCopy(hand, active)}</small></span>
@@ -231,6 +258,7 @@ function renderSplitHand(hand: BlackjackRoundHand, active: boolean) {
         ${hand.cards.map((card) => renderCard(card)).join("")}
       </div>
       <div class="bj-split-hand__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
+      ${renderInsuranceBadge(hand)}
       <div class="bj-split-hand__status">${roundHandStateCopy(hand, active)}</div>
     </div>
   `;
@@ -323,35 +351,37 @@ function renderMobileSeatTabs(
         const ready = seat.status === "betReady";
         const primaryHand = hands[0] ?? null;
         const aceSplit = hands.length > 1 && hands.every((hand) => hand.splitFromAces);
-        const label = round
-          ? hands.length > 1
-            ? activeHand
-              ? `H${activeHand.handIndex + 1}`
-              : aceSplit
-                ? "ACES"
-                : `${hands.length}H`
-            : primaryHand?.result === "blackjack"
-              ? "BJ"
-              : primaryHand?.result
-                ? primaryHand.result.toUpperCase()
-                : primaryHand?.status === "blackjack"
-                  ? "BJ"
-                  : primaryHand?.status === "bust"
-                    ? "BUST"
-                    : primaryHand?.status === "stood"
-                      ? primaryHand.doubled ? "X2" : "STAND"
-                      : primaryHand
-                        ? selected
-                          ? "TURN"
-                          : "PLAY"
-                        : occupied
-                          ? "OUT"
-                          : "EMPTY"
-          : ready
-            ? "READY"
-            : occupied
-              ? "SEATED"
-              : "SIT";
+        const label = round?.phase === "insurance" && activeHand
+          ? "INS"
+          : round
+            ? hands.length > 1
+              ? activeHand
+                ? `H${activeHand.handIndex + 1}`
+                : aceSplit
+                  ? "ACES"
+                  : `${hands.length}H`
+              : primaryHand?.result === "blackjack"
+                ? "BJ"
+                : primaryHand?.result
+                  ? primaryHand.result.toUpperCase()
+                  : primaryHand?.status === "blackjack"
+                    ? "BJ"
+                    : primaryHand?.status === "bust"
+                      ? "BUST"
+                      : primaryHand?.status === "stood"
+                        ? primaryHand.doubled ? "X2" : "STAND"
+                        : primaryHand
+                          ? selected
+                            ? "TURN"
+                            : "PLAY"
+                          : occupied
+                            ? "OUT"
+                            : "EMPTY"
+            : ready
+              ? "READY"
+              : occupied
+                ? "SEATED"
+                : "SIT";
 
         return `
           <button
@@ -396,6 +426,13 @@ function renderBettingStatusCopy(
 }
 
 function renderRoundStatusCopy(round: BlackjackRoundState) {
+  if (round.phase === "insurance") {
+    const activeHand = getActiveBlackjackRoundHand(round);
+    return activeHand
+      ? `Seat ${activeHand.seatId} · Dealer shows Ace · Insurance ${formatReturnAmount(getBlackjackInsuranceMaxWager(activeHand))}`
+      : "Insurance decision pending";
+  }
+
   if (round.phase === "complete") {
     const dealer = evaluateBlackjackHand(round.dealer.cards);
     return round.dealer.blackjack
@@ -432,7 +469,8 @@ function renderDealerHand(round: BlackjackRoundState | null) {
     `;
   }
 
-  const revealHoleCard = round.phase === "complete" || round.dealer.blackjack;
+  const revealHoleCard = round.phase === "complete" ||
+    (round.dealer.blackjack && round.phase !== "insurance");
   const dealerTotal = revealHoleCard
     ? evaluateBlackjackHand(round.dealer.cards).total
     : "?";
@@ -457,13 +495,18 @@ function renderBlackjack(
   round: BlackjackRoundState | null,
 ) {
   const totalBet = round
-    ? round.hands.reduce((total, hand) => total + hand.wager, 0)
+    ? round.hands.reduce(
+        (total, hand) => total + hand.wager + hand.insuranceWager,
+        0,
+      )
     : getTotalSeatBet(state);
   const selectedSeat = state.selectedSeatId ? getSeat(state, state.selectedSeatId) : null;
   const bettingLocked = round !== null;
   const canPlaceBet = !bettingLocked && selectedSeat !== null && selectedSeat.status !== "empty";
   const hasSelectedBet = canPlaceBet && selectedSeat.bet > 0;
   const readiness = getBlackjackRoundReadiness(state, TABLE_MIN);
+  const insurancePhase = round?.phase === "insurance";
+  const canInsure = round ? canTakeBlackjackInsurance(round) : false;
   const canPlayerAct = round?.phase === "playerTurns" && round.activeHandId !== null;
   const canDoubleDown = round ? canDoubleBlackjackHand(round) : false;
   const canSplit = round ? canSplitBlackjackHand(round) : false;
@@ -478,7 +521,7 @@ function renderBlackjack(
     : "SPLIT";
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="8b">
+    <main class="bj-root" data-blackjack-part="9">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -504,7 +547,7 @@ function renderBlackjack(
 
         <aside class="bj-hud bj-hud--status">
           <span>ROUND STATUS</span>
-          <strong>${round ? (round.phase === "complete" ? (round.dealer.blackjack ? "DEALER BLACKJACK" : "ROUND COMPLETE") : round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER TURN") : "PLACE YOUR BETS"}</strong>
+          <strong>${round ? (round.phase === "insurance" ? "INSURANCE" : round.phase === "complete" ? (round.dealer.blackjack ? "DEALER BLACKJACK" : "ROUND COMPLETE") : round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER TURN") : "PLACE YOUR BETS"}</strong>
           <small>${round ? renderRoundStatusCopy(round) : renderBettingStatusCopy(state, selectedChip)}</small>
           ${round
             ? round.phase === "complete"
@@ -601,11 +644,18 @@ function renderBlackjack(
             </button>
           </div>
 
-          <div class="bj-console__round-actions" aria-label="In round actions">
-            <button class="bj-round-action bj-round-action--hit" type="button" data-round-action="hit" ${canPlayerAct ? "" : "disabled"}>HIT</button>
-            <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="stand" ${canPlayerAct ? "" : "disabled"}>STAND</button>
-            <button class="bj-round-action bj-round-action--double" type="button" data-round-action="doubleDown" ${canDoubleDown ? "" : "disabled"}>DOUBLE${canDoubleDown && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
-            <button class="bj-round-action bj-round-action--split" type="button" data-round-action="split" ${canSplit ? "" : "disabled"}>${splitActionLabel}${canSplit && activeRoundHand ? ` · +$${activeRoundHand.wager}` : activeSeatHandCount >= BLACKJACK_MAX_HANDS_PER_SEAT ? " · MAX 4" : ""}</button>
+          <div class="bj-console__round-actions${insurancePhase ? " is-insurance-phase" : ""}" aria-label="In round actions">
+            ${insurancePhase
+              ? `
+                <button class="bj-round-action bj-round-action--insurance" type="button" data-round-action="insuranceTake" ${canInsure ? "" : "disabled"}>INSURANCE${canInsure && activeRoundHand ? ` · ${formatReturnAmount(getBlackjackInsuranceMaxWager(activeRoundHand))}` : ""}</button>
+                <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="insuranceDecline" ${canInsure ? "" : "disabled"}>NO INSURANCE</button>
+              `
+              : `
+                <button class="bj-round-action bj-round-action--hit" type="button" data-round-action="hit" ${canPlayerAct ? "" : "disabled"}>HIT</button>
+                <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="stand" ${canPlayerAct ? "" : "disabled"}>STAND</button>
+                <button class="bj-round-action bj-round-action--double" type="button" data-round-action="doubleDown" ${canDoubleDown ? "" : "disabled"}>DOUBLE${canDoubleDown && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
+                <button class="bj-round-action bj-round-action--split" type="button" data-round-action="split" ${canSplit ? "" : "disabled"}>${splitActionLabel}${canSplit && activeRoundHand ? ` · +$${activeRoundHand.wager}` : activeSeatHandCount >= BLACKJACK_MAX_HANDS_PER_SEAT ? " · MAX 4" : ""}</button>
+              `}
           </div>
         </section>
       </section>
@@ -640,6 +690,24 @@ export function mountBlackjack(app: HTMLDivElement) {
             return;
           }
           const result = startBlackjackRound(state, shoe, TABLE_MIN);
+          round = result.round;
+          shoe = result.shoe;
+          break;
+        }
+        case "insuranceTake": {
+          if (!round || !canTakeBlackjackInsurance(round)) {
+            return;
+          }
+          const result = takeBlackjackInsurance(round, shoe);
+          round = result.round;
+          shoe = result.shoe;
+          break;
+        }
+        case "insuranceDecline": {
+          if (!round || round.phase !== "insurance") {
+            return;
+          }
+          const result = declineBlackjackInsurance(round, shoe);
           round = result.round;
           shoe = result.shoe;
           break;
