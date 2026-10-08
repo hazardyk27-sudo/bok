@@ -9,6 +9,14 @@ const authorityVisualSource = readFileSync(
   new URL("./betAuthorityVisual.ts", import.meta.url),
   "utf8",
 );
+const authoritySource = readFileSync(
+  new URL("./betAuthority.ts", import.meta.url),
+  "utf8",
+);
+const latestDeduperSource = readFileSync(
+  new URL("./latestMutationDeduper.ts", import.meta.url),
+  "utf8",
+);
 const walletSource = readFileSync(
   new URL("./rouletteWalletClient.ts", import.meta.url),
   "utf8",
@@ -48,6 +56,18 @@ describe("roulette wager authority architecture", () => {
     );
     expect(walletSource).not.toContain(
       "applyRouletteBetMoveGuard",
+    );
+  });
+
+  it("registers every fast latest request as an authority write barrier", () => {
+    expect(authoritySource).toContain(
+      "registerRouletteExternalMutationBarrier",
+    );
+    expect(authoritySource).toContain(
+      "joinRouletteAuthorityWriteBarrier",
+    );
+    expect(latestDeduperSource).toContain(
+      "registerRouletteExternalMutationBarrier(\n    promise",
     );
   });
 });
