@@ -1,9 +1,15 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   commitRouletteSequentialChipMove,
   createRouletteMovedBets,
 } from "./chipDragV6";
 import type { RouletteWalletClient } from "./rouletteWalletClient";
+
+const dragSource = readFileSync(
+  new URL("./chipDragV6.ts", import.meta.url),
+  "utf8",
+);
 
 describe("roulette single-authority chip drag v6", () => {
   it("moves the same wager repeatedly without changing total stake", () => {
@@ -116,5 +122,20 @@ describe("roulette single-authority chip drag v6", () => {
         "straight-26",
       ),
     ).toThrow("ROULETTE_DRAG_SOURCE_MISSING");
+  });
+
+  it("re-reads authority after the visual snap instead of committing the drop snapshot", () => {
+    const snapIndex = dragSource.indexOf(
+      "snapGhostToCell(completed, targetCell);",
+    );
+    const latestAuthorityIndex = dragSource.indexOf(
+      "const latestAuthority =",
+    );
+
+    expect(snapIndex).toBeGreaterThanOrEqual(0);
+    expect(latestAuthorityIndex).toBeGreaterThan(snapIndex);
+    expect(dragSource).not.toContain(
+      "authority.roundId!,\n        authority.revision,\n        currentBets",
+    );
   });
 });
