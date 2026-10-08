@@ -1,0 +1,25 @@
+.bj-card.is-card-animating {
+  z-index: 80;
+  will-change: translate, scale, opacity, filter;
+  backface-visibility: hidden;
+}
+
+.bj-root.is-card-animating .bj-felt {
+  overflow: visible;
+}
+
+.bj-root.is-card-animating .bj-console__round-actions,
+.bj-root.is-card-animating .bj-deal-round {
+  pointer-events: none;
+}
+
+.bj-root.is-card-animating .bj-console__round-actions {
+  filter: saturate(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bj-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
