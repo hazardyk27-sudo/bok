@@ -1,50 +1,51 @@
 import "./blackjack.css";
 import "./mobile.css";
+import "./seatState.css";
+import {
+  createInitialSeatState,
+  getOccupiedSeats,
+  getSeat,
+  getTotalSeatBet,
+  leaveSeat,
+  selectSeat,
+  sitAtSeat,
+  type BlackjackSeat,
+  type BlackjackSeatId,
+  type BlackjackSeatState,
+} from "./seatState";
 
-type DemoSeat = {
-  id: number;
-  total?: number;
-  bet?: number;
-  cards?: Array<{ rank: string; suit: string; red?: boolean }>;
-  state: "active" | "empty";
+type DemoCard = { rank: string; suit: string; red?: boolean };
+
+type DemoHand = {
+  total: number;
+  cards: DemoCard[];
 };
 
-const DEMO_SEATS: DemoSeat[] = [
-  {
-    id: 1,
+const DEMO_HANDS: Partial<Record<BlackjackSeatId, DemoHand>> = {
+  1: {
     total: 19,
-    bet: 50,
-    state: "active",
     cards: [
       { rank: "A", suit: "♠" },
       { rank: "8", suit: "♠" },
     ],
   },
-  { id: 2, state: "empty" },
-  {
-    id: 3,
+  3: {
     total: 16,
-    bet: 100,
-    state: "active",
     cards: [
       { rank: "9", suit: "♥", red: true },
       { rank: "7", suit: "♦", red: true },
     ],
   },
-  { id: 4, state: "empty" },
-  {
-    id: 5,
+  5: {
     total: 16,
-    bet: 125,
-    state: "active",
     cards: [
       { rank: "K", suit: "♠" },
       { rank: "6", suit: "♣" },
     ],
   },
-];
+};
 
-function renderCard(card: NonNullable<DemoSeat["cards"]>[number]) {
+function renderCard(card: DemoCard) {
   return `
     <div class="bj-card${card.red ? " bj-card--red" : ""}" aria-label="${card.rank}${card.suit}">
       <span class="bj-card__rank">${card.rank}</span>
@@ -54,24 +55,43 @@ function renderCard(card: NonNullable<DemoSeat["cards"]>[number]) {
   `;
 }
 
-function renderSeat(seat: DemoSeat) {
-  if (seat.state === "empty") {
-    return `
-      <div class="bj-seat bj-seat--${seat.id} bj-seat--empty" data-seat="${seat.id}">
-        <div class="bj-seat__bet-circle">
-          <div class="bj-seat__empty-icon" aria-hidden="true">♣</div>
-          <div class="bj-seat__empty-copy">SEAT ${seat.id} · EMPTY</div>
-          <button class="bj-seat__take-seat" type="button">TAKE SEAT</button>
-        </div>
+function renderEmptySeat(seat: BlackjackSeat) {
+  return `
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--empty" data-seat="${seat.id}" data-seat-status="empty">
+      <div class="bj-seat__bet-circle">
+        <div class="bj-seat__empty-icon" aria-hidden="true">♣</div>
+        <div class="bj-seat__empty-copy">SEAT ${seat.id} · EMPTY</div>
+        <button class="bj-seat__take-seat" type="button" data-seat-action="sit" data-seat-id="${seat.id}">TAKE SEAT</button>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
+
+function renderSeatedSeat(seat: BlackjackSeat, selected: boolean) {
+  return `
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--seated${selected ? " is-selected" : ""}" data-seat="${seat.id}" data-seat-status="seated">
+      <div class="bj-seat__bet-circle">
+        <span class="bj-seat__waiting-icon" aria-hidden="true"></span>
+        <strong class="bj-seat__waiting-title">SEAT ${seat.id}</strong>
+        <span class="bj-seat__waiting-copy">SELECT CHIP TO BET</span>
+      </div>
+      <button class="bj-seat__badge" type="button" data-seat-action="select" data-seat-id="${seat.id}" aria-pressed="${selected}">
+        <span class="bj-seat__person" aria-hidden="true"></span>
+        <span><strong>Seat ${seat.id}</strong><small>${selected ? "SELECTED" : "SEATED"}</small></span>
+      </button>
+      ${selected ? `<button class="bj-seat__leave" type="button" data-seat-action="leave" data-seat-id="${seat.id}">LEAVE SEAT</button>` : ""}
+    </div>
+  `;
+}
+
+function renderReadySeat(seat: BlackjackSeat, selected: boolean) {
+  const hand = DEMO_HANDS[seat.id];
 
   return `
-    <div class="bj-seat bj-seat--${seat.id} bj-seat--active" data-seat="${seat.id}">
-      <div class="bj-seat__total">${seat.total}</div>
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${selected ? " is-selected" : ""}" data-seat="${seat.id}" data-seat-status="betReady">
+      ${hand ? `<div class="bj-seat__total">${hand.total}</div>` : ""}
       <div class="bj-seat__cards">
-        ${seat.cards?.map(renderCard).join("") ?? ""}
+        ${hand?.cards.map(renderCard).join("") ?? ""}
       </div>
       <div class="bj-seat__chip-stack" aria-hidden="true">
         <span class="bj-chip bj-chip--green"></span>
@@ -79,12 +99,27 @@ function renderSeat(seat: DemoSeat) {
         <span class="bj-chip bj-chip--red"></span>
       </div>
       <div class="bj-seat__bet">$${seat.bet}</div>
-      <div class="bj-seat__badge">
+      <button class="bj-seat__badge" type="button" data-seat-action="select" data-seat-id="${seat.id}" aria-pressed="${selected}">
         <span class="bj-seat__person" aria-hidden="true"></span>
-        <span><strong>Seat ${seat.id}</strong><small>BET READY</small></span>
-      </div>
+        <span><strong>Seat ${seat.id}</strong><small>${selected ? "SELECTED" : "BET READY"}</small></span>
+      </button>
+      ${selected ? `<button class="bj-seat__leave" type="button" data-seat-action="leave" data-seat-id="${seat.id}">LEAVE SEAT</button>` : ""}
     </div>
   `;
+}
+
+function renderSeat(seat: BlackjackSeat, selectedSeatId: BlackjackSeatId | null) {
+  const selected = seat.id === selectedSeatId;
+
+  if (seat.status === "empty") {
+    return renderEmptySeat(seat);
+  }
+
+  if (seat.status === "seated") {
+    return renderSeatedSeat(seat, selected);
+  }
+
+  return renderReadySeat(seat, selected);
 }
 
 function chipButton(value: string, variant: string, selected = false) {
@@ -95,28 +130,48 @@ function chipButton(value: string, variant: string, selected = false) {
   `;
 }
 
-function renderMobileSeatTabs() {
+function renderMobileSeatTabs(state: BlackjackSeatState) {
   return `
     <nav class="bj-mobile-seat-tabs" aria-label="Blackjack seats">
-      ${DEMO_SEATS.map((seat) => `
-        <button
-          class="bj-mobile-seat-tab${seat.id === 3 ? " is-selected" : ""}${seat.state === "active" ? " is-occupied" : ""}"
-          type="button"
-          data-mobile-seat="${seat.id}"
-          aria-label="Seat ${seat.id}${seat.state === "active" ? ", occupied" : ", empty"}"
-          aria-pressed="${seat.id === 3}"
-        >
-          <strong>${seat.id}</strong>
-          <small>${seat.state === "active" ? "READY" : "SIT"}</small>
-        </button>
-      `).join("")}
+      ${state.seats.map((seat) => {
+        const selected = state.selectedSeatId === seat.id;
+        const occupied = seat.status !== "empty";
+        const ready = seat.status === "betReady";
+        const label = ready ? "READY" : occupied ? "SEATED" : "SIT";
+
+        return `
+          <button
+            class="bj-mobile-seat-tab${selected ? " is-selected" : ""}${occupied ? " is-occupied is-seated" : ""}${ready ? " is-ready" : ""}"
+            type="button"
+            data-mobile-seat="${seat.id}"
+            aria-label="Seat ${seat.id}, ${label.toLowerCase()}"
+            aria-pressed="${selected}"
+          >
+            <strong>${seat.id}</strong>
+            <small>${label}</small>
+          </button>
+        `;
+      }).join("")}
     </nav>
   `;
 }
 
-export function mountBlackjack(app: HTMLDivElement) {
+function renderStatusCopy(state: BlackjackSeatState) {
+  const occupied = getOccupiedSeats(state);
+  const selected = state.selectedSeatId;
+
+  if (occupied.length === 0) {
+    return "Choose a seat to start";
+  }
+
+  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""}`;
+}
+
+function renderBlackjack(app: HTMLDivElement, state: BlackjackSeatState) {
+  const totalBet = getTotalSeatBet(state);
+
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="2">
+    <main class="bj-root" data-blackjack-part="3">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -132,7 +187,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           </div>
           <div class="bj-hud__pair">
             <span>TOTAL BET</span>
-            <strong>$275.00</strong>
+            <strong>$${totalBet.toFixed(2)}</strong>
           </div>
           <div class="bj-hud__min">
             <span>TABLE MIN</span>
@@ -143,7 +198,7 @@ export function mountBlackjack(app: HTMLDivElement) {
         <aside class="bj-hud bj-hud--status">
           <span>ROUND STATUS</span>
           <strong>PLACE YOUR BETS</strong>
-          <small>Seats 1, 3 and 5 ready</small>
+          <small>${renderStatusCopy(state)}</small>
         </aside>
 
         <div class="bj-dealer-zone" aria-label="Dealer">
@@ -200,12 +255,12 @@ export function mountBlackjack(app: HTMLDivElement) {
             <div class="bj-table-arc bj-table-arc--inner" aria-hidden="true"></div>
 
             <div class="bj-seats">
-              ${DEMO_SEATS.map(renderSeat).join("")}
+              ${state.seats.map((seat) => renderSeat(seat, state.selectedSeatId)).join("")}
             </div>
           </div>
         </div>
 
-        ${renderMobileSeatTabs()}
+        ${renderMobileSeatTabs(state)}
 
         <section class="bj-console" aria-label="Blackjack controls">
           <div class="bj-console__chips" aria-label="Select chip">
@@ -221,7 +276,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           <div class="bj-console__bet-actions">
             <button class="bj-action bj-action--place" type="button">
               <span class="bj-action__icon">＋</span>
-              <span><strong>PLACE BET</strong><small>Selected seat</small></span>
+              <span><strong>PLACE BET</strong><small>${state.selectedSeatId ? `Seat ${state.selectedSeatId}` : "Select seat"}</small></span>
             </button>
             <button class="bj-action bj-action--neutral" type="button">
               <span class="bj-action__icon">↶</span>
@@ -247,4 +302,64 @@ export function mountBlackjack(app: HTMLDivElement) {
       </section>
     </main>
   `;
+}
+
+function parseSeatId(value: string | undefined): BlackjackSeatId | null {
+  const parsed = Number(value);
+  return parsed >= 1 && parsed <= 5 ? (parsed as BlackjackSeatId) : null;
+}
+
+export function mountBlackjack(app: HTMLDivElement) {
+  let state = createInitialSeatState();
+
+  const rerender = () => renderBlackjack(app, state);
+
+  app.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const mobileSeat = target.closest<HTMLElement>("[data-mobile-seat]");
+    if (mobileSeat) {
+      const seatId = parseSeatId(mobileSeat.dataset.mobileSeat);
+      if (!seatId) {
+        return;
+      }
+
+      state = getSeat(state, seatId).status === "empty"
+        ? sitAtSeat(state, seatId)
+        : selectSeat(state, seatId);
+      rerender();
+      return;
+    }
+
+    const action = target.closest<HTMLElement>("[data-seat-action]");
+    if (!action) {
+      return;
+    }
+
+    const seatId = parseSeatId(action.dataset.seatId);
+    if (!seatId) {
+      return;
+    }
+
+    switch (action.dataset.seatAction) {
+      case "sit":
+        state = sitAtSeat(state, seatId);
+        break;
+      case "select":
+        state = selectSeat(state, seatId);
+        break;
+      case "leave":
+        state = leaveSeat(state, seatId);
+        break;
+      default:
+        return;
+    }
+
+    rerender();
+  });
+
+  rerender();
 }
