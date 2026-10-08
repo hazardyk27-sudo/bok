@@ -11,23 +11,43 @@ describe("roulette network guard", () => {
       getRouletteRequestTimeoutMs(
         "/api/roulette/state",
       ),
-    ).toBe(ROULETTE_STATE_HARD_TIMEOUT_MS);
+    ).toBe(
+      ROULETTE_STATE_HARD_TIMEOUT_MS,
+    );
   });
 
-  it("bounds global bet mutations more aggressively than the legacy 8s client timeout", () => {
+  it("bounds both normal and latest global bet mutations", () => {
     expect(
       getRouletteRequestTimeoutMs(
         "/api/roulette/global-bets",
         { method: "PUT" },
       ),
-    ).toBe(ROULETTE_MUTATION_HARD_TIMEOUT_MS);
-    expect(ROULETTE_MUTATION_HARD_TIMEOUT_MS).toBeLessThan(8_000);
+    ).toBe(
+      ROULETTE_MUTATION_HARD_TIMEOUT_MS,
+    );
+    expect(
+      getRouletteRequestTimeoutMs(
+        "/api/roulette/global-bets/latest",
+        { method: "PUT" },
+      ),
+    ).toBe(
+      ROULETTE_MUTATION_HARD_TIMEOUT_MS,
+    );
+    expect(
+      ROULETTE_MUTATION_HARD_TIMEOUT_MS,
+    ).toBeLessThan(8_000);
   });
 
   it("does not touch unrelated requests or wrong methods", () => {
     expect(
       getRouletteRequestTimeoutMs(
         "/api/roulette/global-bets",
+        { method: "GET" },
+      ),
+    ).toBeNull();
+    expect(
+      getRouletteRequestTimeoutMs(
+        "/api/roulette/global-bets/latest",
         { method: "GET" },
       ),
     ).toBeNull();

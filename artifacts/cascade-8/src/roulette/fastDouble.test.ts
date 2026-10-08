@@ -2,10 +2,17 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { getRouletteChipTier } from "./chipVisual";
-import { doubleRoulettePlacementsForFastWrite } from "./fastDouble";
+import {
+  canRouletteUseFastDouble,
+  doubleRoulettePlacementsForFastWrite,
+} from "./fastDouble";
 
 const source = readFileSync(
   fileURLToPath(new URL("./fastDouble.ts", import.meta.url)),
+  "utf8",
+);
+const deduperSource = readFileSync(
+  fileURLToPath(new URL("./latestMutationDeduper.ts", import.meta.url)),
   "utf8",
 );
 
@@ -39,6 +46,63 @@ describe("roulette fast x2", () => {
     );
     expect(source).toContain(
       "{ capture: true }",
+    );
+  });
+
+  it("does not pre-apply x2 to authority before the runtime reducer", () => {
+    expect(source).not.toContain(
+      "setRouletteBetAuthority(",
+    );
+    expect(deduperSource).toContain(
+      "setRouletteBetAuthority(",
+    );
+    expect(deduperSource).toContain(
+      "consumeMatchingRouletteExternalLatestMutation",
+    );
+  });
+
+  it("uses fast x2 for confirmed or still-active fast topology only", () => {
+    expect(
+      canRouletteUseFastDouble(
+        false,
+        false,
+      ),
+    ).toBe(true);
+    expect(
+      canRouletteUseFastDouble(
+        true,
+        true,
+      ),
+    ).toBe(true);
+    expect(
+      canRouletteUseFastDouble(
+        true,
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("falls back to the serialized runtime path after a normal optimistic topology mutation", () => {
+    expect(source).toContain(
+      "hasRouletteActiveExternalLatestMutation",
+    );
+    expect(source).toContain(
+      "authority.optimistic",
+    );
+    expect(source).toContain(
+      "canRouletteUseFastDouble",
+    );
+  });
+
+  it("renders a fast balance only when that response still owns authority", () => {
+    expect(source).toContain(
+      "const stillCurrent =",
+    );
+    expect(source).toContain(
+      "if (stillCurrent)",
+    );
+    expect(source).toContain(
+      "renderFastConfirmedBalance",
     );
   });
 });
