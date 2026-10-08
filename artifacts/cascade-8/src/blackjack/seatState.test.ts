@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   addSeatChip,
+  clearSeatBet,
   createInitialSeatState,
+  doubleSeatBet,
   getOccupiedSeats,
   getTotalSeatBet,
   leaveSeat,
   selectSeat,
   sitAtSeat,
+  undoSeatChip,
 } from "./seatState";
 
 describe("blackjack seat state", () => {
@@ -55,6 +58,49 @@ describe("blackjack seat state", () => {
       bet: 10,
       chips: [5, 5],
     });
+  });
+
+  it("undo removes the last exact chip and can drop a seat below table minimum", () => {
+    let state = sitAtSeat(createInitialSeatState(), 2);
+    state = addSeatChip(state, 2, 5, 10);
+    state = addSeatChip(state, 2, 25, 10);
+    state = undoSeatChip(state, 2, 10);
+
+    expect(state.seats.find((seat) => seat.id === 2)).toMatchObject({
+      status: "seated",
+      bet: 5,
+      chips: [5],
+    });
+  });
+
+  it("clear removes every chip but keeps the player seated", () => {
+    let state = selectSeat(createInitialSeatState(), 5);
+    state = clearSeatBet(state, 5);
+
+    expect(state.seats.find((seat) => seat.id === 5)).toMatchObject({
+      status: "seated",
+      bet: 0,
+      chips: [],
+    });
+    expect(state.selectedSeatId).toBe(5);
+  });
+
+  it("x2 duplicates the exact pre-deal chip composition", () => {
+    const state = doubleSeatBet(createInitialSeatState(), 5, 10);
+
+    expect(state.seats.find((seat) => seat.id === 5)).toMatchObject({
+      status: "betReady",
+      bet: 250,
+      chips: [100, 25, 100, 25],
+    });
+  });
+
+  it("undo clear and x2 are no-ops on a seated zero-bet seat", () => {
+    const seated = sitAtSeat(createInitialSeatState(), 2);
+
+    expect(undoSeatChip(seated, 2, 10)).toEqual(seated);
+    expect(clearSeatBet(seated, 2)).toEqual(seated);
+    expect(doubleSeatBet(seated, 2, 10)).toEqual(seated);
   });
 
   it("keeps each seat's chip history independent", () => {
