@@ -4,6 +4,11 @@ import {
   type BlackjackRank,
   type BlackjackSuit,
 } from "../../../cascade-8/src/blackjack/blackjackCore";
+import type {
+  BlackjackDealSeat,
+  BlackjackServerActionName,
+  BlackjackServerActionRequest,
+} from "../../../cascade-8/src/blackjack/serverContract";
 import { BlackjackServerTableStore } from "./serverTable";
 import type { BlackjackShoe } from "../../../cascade-8/src/blackjack/shoe";
 
@@ -30,6 +35,21 @@ function shoeWith(cards: BlackjackCard[], cutIndex = cards.length): BlackjackSho
   };
 }
 
+let keyCounter = 0;
+function action(
+  expectedRevision: number,
+  name: BlackjackServerActionName,
+  seats?: BlackjackDealSeat[],
+): BlackjackServerActionRequest {
+  keyCounter += 1;
+  return {
+    expectedRevision,
+    idempotencyKey: `server-test-key-${keyCounter}`,
+    action: name,
+    seats,
+  };
+}
+
 describe("BlackjackServerTableStore", () => {
   it("starts with only DEAL allowed and keeps independent session revisions", () => {
     const store = new BlackjackServerTableStore({ random: () => 0.5 });
@@ -37,7 +57,12 @@ describe("BlackjackServerTableStore", () => {
     const first = store.getState("session-a");
     const second = store.getState("session-b");
 
-    expect(first).toMatchObject({ revision: 0, roundId: null, round: null });
+    expect(first).toMatchObject({
+      revision: 0,
+      roundId: null,
+      round: null,
+      wallet: { balanceCents: 0 },
+    });
     expect(first.allowedActions).toEqual(["deal"]);
     expect(first.shoe.cardsRemaining).toBe(312);
     expect(second.revision).toBe(0);
@@ -57,11 +82,10 @@ describe("BlackjackServerTableStore", () => {
       now: () => 123,
     });
 
-    const dealt = store.applyAction("session-a", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [{ seatId: 1, wager: 50 }],
-    });
+    const dealt = store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
 
     expect(dealt.revision).toBe(1);
     expect(dealt.roundId).toBe("round-1");
@@ -85,20 +109,16 @@ describe("BlackjackServerTableStore", () => {
       card("7", 3),
       card("4", 4),
     ];
-    const store = new BlackjackServerTableStore({
-      createShoe: () => shoeWith(cards),
-    });
+    const store = new BlackjackServerTableStore({ createShoe: () => shoeWith(cards) });
 
-    store.applyAction("session-a", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [{ seatId: 1, wager: 50 }],
-    });
+    store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
 
-    expect(() => store.applyAction("session-a", {
-      expectedRevision: 0,
-      action: "hit",
-    })).toThrow("BLACKJACK_STALE_REVISION");
+    expect(() => store.applyAction("session-a", action(0, "hit"))).toThrow(
+      "BLACKJACK_STALE_REVISION",
+    );
   });
 
   it("keeps dealer blackjack secret until the insurance decision is finished", () => {
@@ -113,21 +133,17 @@ describe("BlackjackServerTableStore", () => {
       createRoundId: () => "insurance-round",
     });
 
-    const dealt = store.applyAction("session-a", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [{ seatId: 1, wager: 50 }],
-    });
+    const dealt = store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
 
     expect(dealt.round?.phase).toBe("insurance");
     expect(dealt.round?.dealer.cards[1]).toBeNull();
     expect(dealt.round?.dealer.blackjack).toBeNull();
     expect(dealt.allowedActions).toEqual(["insurance", "declineInsurance"]);
 
-    const insured = store.applyAction("session-a", {
-      expectedRevision: 1,
-      action: "insurance",
-    });
+    const insured = store.applyAction("session-a", action(1, "insurance"));
 
     expect(insured.round?.phase).toBe("complete");
     expect(insured.round?.dealer.cards[1]?.rank).toBe("K");
@@ -141,28 +157,25 @@ describe("BlackjackServerTableStore", () => {
     expect(insured.allowedActions).toEqual(["next"]);
   });
 
-  it("validates DEAL seats without imposing a configured table maximum", () => {
+  it("has no configured table maximum while preserving numeric safety", () => {
     const store = new BlackjackServerTableStore({ random: () => 0.5 });
 
-    expect(() => store.applyAction("session-a", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [{ seatId: 1, wager: 9 }],
-    })).toThrow("BLACKJACK_INVALID_WAGER");
+    expect(() => store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 1, wager: 9 }]),
+    )).toThrow("BLACKJACK_INVALID_WAGER");
 
-    expect(() => store.applyAction("session-b", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [
+    expect(() => store.applyAction(
+      "session-b",
+      action(0, "deal", [
         { seatId: 1, wager: 10 },
         { seatId: 1, wager: 20 },
-      ],
-    })).toThrow("BLACKJACK_DUPLICATE_SEAT");
+      ]),
+    )).toThrow("BLACKJACK_DUPLICATE_SEAT");
 
-    expect(() => store.applyAction("session-c", {
-      expectedRevision: 0,
-      action: "deal",
-      seats: [{ seatId: 5, wager: 1_000_000_000 }],
-    })).not.toThrow();
+    expect(() => store.applyAction(
+      "session-c",
+      action(0, "deal", [{ seatId: 5, wager: 1_000_000_000_000 }]),
+    )).not.toThrow();
   });
 });
