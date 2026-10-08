@@ -89,8 +89,6 @@ describe("roulette fast normal placement", () => {
       )!
       .click();
 
-    // No await before these assertions: both effects must happen before the
-    // browser yields the next frame.
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/roulette/global-bets/latest",
@@ -130,7 +128,7 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
   });
 
-  it("deducts the visible balance immediately even when drag forces the normal serialized writer", () => {
+  it("deducts immediately on the serialized path and rejects stale poll balance while optimistic", async () => {
     const app = document.createElement("div");
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
@@ -143,9 +141,6 @@ describe("roulette fast normal placement", () => {
     `;
     document.body.append(app);
 
-    // A drag is still optimistic. Fast-place must not cross that mutation, but
-    // wallet acknowledgement still belongs to this click and cannot wait for the
-    // serialized network write to finish.
     setRouletteBetAuthority(
       "round-1",
       [{ betId: "straight-19", amount: 10 }],
@@ -164,10 +159,17 @@ describe("roulette fast normal placement", () => {
       .click();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(
-      app.querySelector<HTMLElement>(
-        "[data-wallet-balance]",
-      )?.textContent,
-    ).toBe("$90");
+    const balance = app.querySelector<HTMLElement>(
+      "[data-wallet-balance]",
+    )!;
+    expect(balance.textContent).toBe("$90");
+
+    // Simulate a background /state poll repainting the last server balance while
+    // the local wager is still optimistic. The visible reservation must win.
+    balance.textContent = "$100";
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(balance.textContent).toBe("$90");
   });
 });
