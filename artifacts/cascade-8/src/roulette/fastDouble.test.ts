@@ -93,4 +93,16 @@ describe("roulette fast x2", () => {
       "canRouletteUseFastDouble",
     );
   });
+
+  it("renders a fast balance only when that response still owns authority", () => {
+    expect(source).toContain(
+      "const stillCurrent =",
+    );
+    expect(source).toContain(
+      "if (stillCurrent)",
+    );
+    expect(source).toContain(
+      "renderFastConfirmedBalance",
+    );
+  });
 });
