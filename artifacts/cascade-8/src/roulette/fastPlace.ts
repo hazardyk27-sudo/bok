@@ -11,15 +11,15 @@ import {
   setRouletteBetAuthority,
 } from "./betAuthorityVisual";
 import {
-  isRouletteCapturedPlaceIntentPending,
   registerRouletteCapturedPlaceIntent,
 } from "./capturedPlaceIntent";
 import {
   hasRouletteActiveExternalLatestMutation,
   registerRouletteExternalLatestMutation,
 } from "./latestMutationDeduper";
-import type {
-  RouletteGlobalBetUpdateResponse,
+import {
+  RouletteWalletClient,
+  type RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
 import {
   formatRouletteBalance,
@@ -166,6 +166,8 @@ export function installRouletteFastPlace(
   }
 
   panel.dataset.fastPlaceInstalled = "true";
+  const serializedWallet =
+    new RouletteWalletClient();
 
   let pendingVisibleBalance: PendingVisibleBalance | null = null;
   let visibleBalanceSequence = 0;
@@ -304,15 +306,10 @@ export function installRouletteFastPlace(
           hasMatchingActiveFastMutation,
         );
 
-      // Capture owns the user intent. Move canonical authority to the exact new
-      // topology before any runtime bubble handler can consult a stale mirror.
-      // placeRouletteBet consumes the same intent instead of adding the chip a
-      // second time.
-      const intentToken =
-        registerRouletteCapturedPlaceIntent(
-          betId,
-          plan,
-        );
+      registerRouletteCapturedPlaceIntent(
+        betId,
+        plan,
+      );
       setRouletteBetAuthority(
         authority.roundId,
         plan,
@@ -335,36 +332,62 @@ export function installRouletteFastPlace(
         reservation.balanceCents,
       );
 
-      // Serialized writes can wait behind an older drag barrier, but the local
-      // intent cannot. Verify after bubbling that runtime consumed this exact
-      // captured plan. If it did not, restore both topology and visible money.
       if (!canUseFast) {
-        queueMicrotask(() => {
-          if (
-            pendingVisibleBalance?.id !==
-            reservation.id
-          ) {
-            return;
-          }
+        // The click itself owns the serialized write. Calling updateGlobalBet
+        // here synchronously puts this plan behind any older drag barrier while
+        // preserving the user's local authority/balance immediately. Register
+        // the returned promise only after enqueueing it, so the barrier cannot
+        // ever wait on itself. The later roulette_gbet runtime writer consumes
+        // this exact promise through latestMutationDeduper instead of sending a
+        // duplicate request.
+        const request =
+          serializedWallet.updateGlobalBet(
+            authority.roundId,
+            plan,
+            `roulette_captured_place_${crypto.randomUUID().replaceAll("-", "")}`,
+            authority.revision,
+          );
 
-          if (
-            isRouletteCapturedPlaceIntentPending(
-              intentToken,
-            )
-          ) {
-            pendingVisibleBalance = null;
-            setRouletteBetAuthority(
-              authority.roundId!,
-              current,
-              authority.revision,
-              authority.optimistic,
+        registerRouletteExternalLatestMutation(
+          authority.roundId,
+          plan,
+          request,
+        );
+
+        void request
+          .then((response) => {
+            if (
+              pendingVisibleBalance?.id !==
+              reservation.id
+            ) {
+              return;
+            }
+
+            const after =
+              getRouletteBetAuthoritySnapshot();
+            const stillSamePlan =
+              after.roundId === reservation.roundId &&
+              after.bets !== null &&
+              sameBetTotals(
+                after.bets,
+                reservation.plan,
+              );
+
+            if (stillSamePlan) {
+              pendingVisibleBalance = null;
+              renderBalance(
+                app,
+                response.balanceCents,
+              );
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "[roulette] serialized captured place sync failed",
+              error,
             );
-            renderBalance(
-              app,
-              reservation.previousBalanceCents,
-            );
-          }
-        });
+            queueBalanceReconcile();
+          });
         return;
       }
 
