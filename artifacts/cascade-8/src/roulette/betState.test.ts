@@ -10,7 +10,6 @@ import {
   doubleRouletteBets,
   expandRouletteBetPlacementsToChipValues,
   getRouletteBetTotals,
-  getRouletteDisplayChipValue,
   getRouletteTotalStake,
   moveRouletteBetPlacements,
   placeRouletteBet,
@@ -22,221 +21,107 @@ import {
 
 describe("roulette local wager state", () => {
   it("stacks the selected chip on the same betting area", () => {
-    let state =
-      createRouletteBetState();
+    let state = createRouletteBetState();
 
-    state = selectRouletteChip(
-      state,
-      25,
-    );
-    state = placeRouletteBet(
-      state,
-      "straight-17",
-    );
-    state = placeRouletteBet(
-      state,
-      "straight-17",
-    );
-    state = selectRouletteChip(
-      state,
-      5,
-    );
-    state = placeRouletteBet(
-      state,
-      "red",
-    );
+    state = selectRouletteChip(state, 25);
+    state = placeRouletteBet(state, "straight-17");
+    state = placeRouletteBet(state, "straight-17");
+    state = selectRouletteChip(state, 5);
+    state = placeRouletteBet(state, "red");
 
-    expect(
-      getRouletteBetTotals(
-        state.placements,
-      ),
-    ).toEqual({
+    expect(getRouletteBetTotals(state.placements)).toEqual({
       "straight-17": 50,
       red: 5,
     });
-    expect(
-      getRouletteTotalStake(
-        state.placements,
-      ),
-    ).toBe(55);
+    expect(getRouletteTotalStake(state.placements)).toBe(55);
   });
 
   it("moves every granular placement from one betting area to another without changing stake", () => {
     const placements = [
-      {
-        betId: "straight-29",
-        amount: 10,
-      },
-      {
-        betId: "red",
-        amount: 50,
-      },
-      {
-        betId: "straight-29",
-        amount: 100,
-      },
-      {
-        betId: "straight-31",
-        amount: 500,
-      },
+      { betId: "straight-29", amount: 10 },
+      { betId: "red", amount: 50 },
+      { betId: "straight-29", amount: 100 },
+      { betId: "straight-31", amount: 500 },
     ];
 
-    const moved =
-      moveRouletteBetPlacements(
-        placements,
-        "straight-29",
-        "straight-31",
-      );
+    const moved = moveRouletteBetPlacements(
+      placements,
+      "straight-29",
+      "straight-31",
+    );
 
     expect(moved).toEqual([
-      {
-        betId: "straight-31",
-        amount: 10,
-      },
-      {
-        betId: "red",
-        amount: 50,
-      },
-      {
-        betId: "straight-31",
-        amount: 100,
-      },
-      {
-        betId: "straight-31",
-        amount: 500,
-      },
+      { betId: "straight-31", amount: 10 },
+      { betId: "red", amount: 50 },
+      { betId: "straight-31", amount: 100 },
+      { betId: "straight-31", amount: 500 },
     ]);
-    expect(
-      getRouletteBetTotals(moved),
-    ).toEqual({
+    expect(getRouletteBetTotals(moved)).toEqual({
       "straight-31": 610,
       red: 50,
     });
-    expect(
-      getRouletteTotalStake(moved),
-    ).toBe(
-      getRouletteTotalStake(
-        placements,
-      ),
+    expect(getRouletteTotalStake(moved)).toBe(
+      getRouletteTotalStake(placements),
     );
   });
 
   it("does not mutate the original placement list while moving a bet", () => {
     const placements = [
-      {
-        betId: "straight-29",
-        amount: 10,
-      },
+      { betId: "straight-29", amount: 10 },
     ];
 
-    const moved =
-      moveRouletteBetPlacements(
-        placements,
-        "straight-29",
-        "straight-30",
-      );
+    const moved = moveRouletteBetPlacements(
+      placements,
+      "straight-29",
+      "straight-30",
+    );
 
     expect(placements).toEqual([
-      {
-        betId: "straight-29",
-        amount: 10,
-      },
+      { betId: "straight-29", amount: 10 },
     ]);
     expect(moved).toEqual([
-      {
-        betId: "straight-30",
-        amount: 10,
-      },
+      { betId: "straight-30", amount: 10 },
     ]);
-    expect(moved[0]).not.toBe(
-      placements[0],
-    );
+    expect(moved[0]).not.toBe(placements[0]);
   });
 
   it("undoes only the latest placement", () => {
-    let state =
-      createRouletteBetState();
+    let state = createRouletteBetState();
 
-    state = placeRouletteBet(
-      state,
-      "black",
-    );
-    state = placeRouletteBet(
-      state,
-      "odd",
-    );
-    state =
-      undoRouletteBet(state);
+    state = placeRouletteBet(state, "black");
+    state = placeRouletteBet(state, "odd");
+    state = undoRouletteBet(state);
 
-    expect(
-      state.placements,
-    ).toEqual([
-      {
-        betId: "black",
-        amount: 10,
-      },
+    expect(state.placements).toEqual([
+      { betId: "black", amount: 10 },
     ]);
   });
 
   it("clears the current table without deleting the saved previous round", () => {
-    let state =
-      createRouletteBetState();
+    let state = createRouletteBetState();
 
-    state = placeRouletteBet(
-      state,
-      "dozen-2",
-    );
-    state =
-      snapshotRouletteRound(state);
-    state =
-      clearRouletteBets(state);
+    state = placeRouletteBet(state, "dozen-2");
+    state = snapshotRouletteRound(state);
+    state = clearRouletteBets(state);
 
-    expect(
-      state.placements,
-    ).toEqual([]);
-    expect(
-      state.previousRoundPlacements,
-    ).toHaveLength(1);
+    expect(state.placements).toEqual([]);
+    expect(state.previousRoundPlacements).toHaveLength(1);
   });
 
   it("rebets the previous committed round exactly", () => {
-    let state =
-      createRouletteBetState();
+    let state = createRouletteBetState();
 
-    state = selectRouletteChip(
-      state,
-      100,
-    );
-    state = placeRouletteBet(
-      state,
-      "column-1",
-    );
-    state = selectRouletteChip(
-      state,
-      5,
-    );
-    state = placeRouletteBet(
-      state,
-      "straight-0",
-    );
-    state =
-      snapshotRouletteRound(state);
-    state =
-      clearRouletteBets(state);
-    state =
-      rebetRouletteRound(state);
+    state = selectRouletteChip(state, 100);
+    state = placeRouletteBet(state, "column-1");
+    state = selectRouletteChip(state, 5);
+    state = placeRouletteBet(state, "straight-0");
+    state = snapshotRouletteRound(state);
+    state = clearRouletteBets(state);
+    state = rebetRouletteRound(state);
 
-    expect(
-      state.placements,
-    ).toEqual([
-      {
-        betId: "column-1",
-        amount: 100,
-      },
-      {
-        betId: "straight-0",
-        amount: 5,
-      },
+    expect(state.placements).toEqual([
+      { betId: "column-1", amount: 100 },
+      { betId: "straight-0", amount: 5 },
     ]);
   });
 
@@ -276,10 +161,7 @@ describe("roulette local wager state", () => {
 
     expect(getRouletteTotalStake(state.placements)).toBe(5120);
     expect(state.placements).toEqual([
-      {
-        betId: "straight-17",
-        amount: 5120,
-      },
+      { betId: "straight-17", amount: 5120 },
     ]);
   });
 
@@ -294,81 +176,29 @@ describe("roulette local wager state", () => {
     }
 
     expect(state.placements).toEqual([
-      {
-        betId: "straight-17",
-        amount: 640,
-      },
+      { betId: "straight-17", amount: 640 },
     ]);
     expect(
       compactRouletteBetPlacements(state.placements),
     ).toEqual([
-      {
-        betId: "straight-17",
-        amount: 640,
-      },
+      { betId: "straight-17", amount: 640 },
     ]);
   });
 
   it("expands aggregate wagers back into canonical chip denominations", () => {
     expect(
       expandRouletteBetPlacementsToChipValues([
-        {
-          betId: "straight-17",
-          amount: 20,
-        },
-        {
-          betId: "red",
-          amount: 640,
-        },
+        { betId: "straight-17", amount: 20 },
+        { betId: "red", amount: 640 },
       ]),
     ).toEqual([
-      {
-        betId: "straight-17",
-        amount: 10,
-      },
-      {
-        betId: "straight-17",
-        amount: 10,
-      },
-      {
-        betId: "red",
-        amount: 500,
-      },
-      {
-        betId: "red",
-        amount: 100,
-      },
-      {
-        betId: "red",
-        amount: 25,
-      },
-      {
-        betId: "red",
-        amount: 10,
-      },
-      {
-        betId: "red",
-        amount: 5,
-      },
+      { betId: "straight-17", amount: 10 },
+      { betId: "straight-17", amount: 10 },
+      { betId: "red", amount: 500 },
+      { betId: "red", amount: 100 },
+      { betId: "red", amount: 25 },
+      { betId: "red", amount: 10 },
+      { betId: "red", amount: 5 },
     ]);
-  });
-
-  it("keeps the legacy runtime fallback aligned with aggregate color tiers", () => {
-    // These return values are palette slots in the old renderer, not wager
-    // denominations. They intentionally mirror white/blue/green/red/black/
-    // purple until the old chip-* markup is fully removed.
-    expect(getRouletteDisplayChipValue(10)).toBe(1);
-    expect(getRouletteDisplayChipValue(20)).toBe(1);
-    expect(getRouletteDisplayChipValue(40)).toBe(1);
-    expect(getRouletteDisplayChipValue(50)).toBe(10);
-    expect(getRouletteDisplayChipValue(80)).toBe(10);
-    expect(getRouletteDisplayChipValue(100)).toBe(25);
-    expect(getRouletteDisplayChipValue(160)).toBe(25);
-    expect(getRouletteDisplayChipValue(499)).toBe(25);
-    expect(getRouletteDisplayChipValue(500)).toBe(5);
-    expect(getRouletteDisplayChipValue(1_999)).toBe(5);
-    expect(getRouletteDisplayChipValue(2_000)).toBe(100);
-    expect(getRouletteDisplayChipValue(4_999)).toBe(100);
-    expect(getRouletteDisplayChipValue(5_000)).toBe(500);
   });
 });

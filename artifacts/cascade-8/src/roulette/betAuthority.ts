@@ -97,8 +97,6 @@ export function shouldAcceptRouletteAuthorityBootstrap(
     return true;
   }
 
-  // A polling GET can be newer only because an earlier queued PUT landed.
-  // It must never replace a later local action that is still pending.
   if (authority.optimistic) {
     return false;
   }
@@ -175,6 +173,25 @@ function enqueueWrite<T>(task: () => Promise<T>) {
   return run;
 }
 
+export function joinRouletteAuthorityWriteBarrier(
+  previous: Promise<unknown>,
+  external: Promise<unknown>,
+): Promise<void> {
+  return Promise.allSettled([
+    previous,
+    external,
+  ]).then(() => undefined);
+}
+
+export function registerRouletteExternalMutationBarrier(
+  external: Promise<unknown>,
+) {
+  writeTail = joinRouletteAuthorityWriteBarrier(
+    writeTail,
+    external,
+  );
+}
+
 function revisionForWrite(
   roundId: string,
   requestedRevision: number,
@@ -222,8 +239,9 @@ function acceptConfirmedWrite(
         response.globalBet.revision,
         false,
       );
+      return true;
     }
-    return;
+    return false;
   }
 
   if (
@@ -248,7 +266,10 @@ function acceptConfirmedWrite(
       authority.revision + 1,
       false,
     );
+    return true;
   }
+
+  return false;
 }
 
 export function reserveRouletteExternalLatestMutation() {
@@ -262,7 +283,7 @@ export function confirmRouletteExternalLatestMutation(
   response: RouletteGlobalBetUpdateResponse,
   sequence: number,
 ) {
-  acceptConfirmedWrite(
+  return acceptConfirmedWrite(
     roundId,
     plan,
     response,
@@ -409,9 +430,6 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
           throw error;
         }
 
-        // A server-stamped fast mutation (for example x2 near the deadline)
-        // supersedes this older queued plan. Never retry the stale older plan
-        // after the newer mutation has already claimed authority.
         if (sequence !== mutationSequence) {
           throw error;
         }

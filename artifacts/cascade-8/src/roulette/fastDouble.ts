@@ -1,6 +1,5 @@
-import {
-  getRouletteAuthoritativeDragPlacements,
-  type RouletteBetPlacement,
+import type {
+  RouletteBetPlacement,
 } from "./betState";
 import {
   confirmRouletteExternalLatestMutation,
@@ -9,6 +8,10 @@ import {
 import {
   getRouletteBetAuthoritySnapshot,
 } from "./betAuthorityVisual";
+import {
+  hasRouletteActiveExternalLatestMutation,
+  registerRouletteExternalLatestMutation,
+} from "./latestMutationDeduper";
 import type {
   RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
@@ -27,6 +30,16 @@ export function doubleRoulettePlacementsForFastWrite(
     ...bet,
     amount: bet.amount * 2,
   }));
+}
+
+export function canRouletteUseFastDouble(
+  optimistic: boolean,
+  hasMatchingActiveFastMutation: boolean,
+) {
+  return (
+    !optimistic ||
+    hasMatchingActiveFastMutation
+  );
 }
 
 function renderFastConfirmedBalance(
@@ -107,13 +120,31 @@ export function installRouletteFastDouble(
 
       const authority =
         getRouletteBetAuthoritySnapshot();
-      const current =
-        getRouletteAuthoritativeDragPlacements();
+      const current = authority.bets;
 
       if (
         !authority.roundId ||
         !current ||
         current.length === 0
+      ) {
+        return;
+      }
+
+      const hasMatchingActiveFastMutation =
+        hasRouletteActiveExternalLatestMutation(
+          authority.roundId,
+          current,
+        );
+
+      // If a normal optimistic action (undo/clear/place/drag/rebet) changed the
+      // topology after the last confirmed/fast plan, do not bypass it with the
+      // monotonic latest endpoint. Let the runtime bubble handler apply x2 and
+      // serialize it through the normal authority queue instead.
+      if (
+        !canRouletteUseFastDouble(
+          authority.optimistic,
+          hasMatchingActiveFastMutation,
+        )
       ) {
         return;
       }
@@ -127,11 +158,11 @@ export function installRouletteFastDouble(
       const idempotencyKey =
         `roulette_fast_double_${crypto.randomUUID().replaceAll("-", "")}`;
 
-      // Deliberately do not stop propagation. The runtime still performs its
-      // normal optimistic x2 render immediately. This parallel request exists
-      // only to get the final desired wager to the server at click time rather
-      // than waiting behind an older client-side write.
-      void fetch(
+      // Start the server-stamped request at capture time, but do not mutate
+      // local authority yet. The runtime bubble handler must still apply x2
+      // exactly once from the pre-click topology. Its matching network call is
+      // then deduplicated onto this request.
+      const request = fetch(
         FAST_DOUBLE_ENDPOINT,
         {
           method: "PUT",
@@ -148,25 +179,40 @@ export function installRouletteFastDouble(
       )
         .then(readFastDoubleResponse)
         .then((response) => {
-          confirmRouletteExternalLatestMutation(
-            authority.roundId!,
-            plan,
-            response,
-            sequence,
-          );
-          renderFastConfirmedBalance(
-            app,
-            response.balanceCents,
-          );
-        })
-        .catch((error) => {
-          // The normal runtime queue remains the fallback. Do not roll the UI
-          // back here because it may already have a newer optimistic mutation.
-          console.error(
-            "[roulette] fast x2 sync failed",
-            error,
-          );
+          const stillCurrent =
+            confirmRouletteExternalLatestMutation(
+              authority.roundId!,
+              plan,
+              response,
+              sequence,
+            );
+
+          // A later mutation or a round rollover may already own the UI. Never
+          // let an older fast response paint its stale wallet balance over it.
+          if (stillCurrent) {
+            renderFastConfirmedBalance(
+              app,
+              response.balanceCents,
+            );
+          }
+          return response;
         });
+
+      registerRouletteExternalLatestMutation(
+        authority.roundId,
+        plan,
+        request,
+      );
+
+      void request.catch((error) => {
+        // The normal runtime queue shares this same promise. Its failure path
+        // performs the authoritative bootstrap recovery; do not launch a second
+        // write here.
+        console.error(
+          "[roulette] fast x2 sync failed",
+          error,
+        );
+      });
     },
     { capture: true },
   );
