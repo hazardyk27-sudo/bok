@@ -66,13 +66,45 @@
   box-shadow: 0 0 20px rgba(36, 239, 146, 0.4);
 }
 
-.bj-seat.is-blackjack .bj-seat__badge {
+.bj-seat.is-blackjack .bj-seat__badge,
+.bj-seat.is-result-blackjack .bj-seat__badge {
   border-color: #f3c86e;
   box-shadow: 0 0 18px rgba(243, 200, 110, 0.32);
 }
 
-.bj-seat.is-blackjack .bj-seat__badge small {
+.bj-seat.is-blackjack .bj-seat__badge small,
+.bj-seat.is-result-blackjack .bj-seat__badge small {
   color: #f3c86e;
+}
+
+.bj-seat.is-bust .bj-seat__badge,
+.bj-seat.is-result-lose .bj-seat__badge {
+  border-color: rgba(240, 68, 68, 0.78);
+  box-shadow: 0 0 16px rgba(240, 68, 68, 0.2);
+}
+
+.bj-seat.is-bust .bj-seat__badge small,
+.bj-seat.is-result-lose .bj-seat__badge small {
+  color: #ff8b8b;
+}
+
+.bj-seat.is-result-win .bj-seat__badge {
+  border-color: rgba(36, 239, 146, 0.88);
+  box-shadow: 0 0 20px rgba(36, 239, 146, 0.28);
+}
+
+.bj-seat.is-result-win .bj-seat__badge small {
+  color: #3af39a;
+}
+
+.bj-seat.is-result-push .bj-seat__badge,
+.bj-seat.is-stood .bj-seat__badge {
+  border-color: rgba(219, 185, 112, 0.62);
+}
+
+.bj-seat.is-result-push .bj-seat__badge small,
+.bj-seat.is-stood .bj-seat__badge small {
+  color: #e4cf9b;
 }
 
 .bj-seat--sitting-out .bj-seat__bet-circle {
@@ -89,6 +121,10 @@
 
 .bj-seat__round-badge {
   cursor: default;
+}
+
+.bj-seat__round-badge small {
+  white-space: nowrap;
 }
 
 .bj-round-lock-note {
@@ -121,6 +157,10 @@
   }
 
   .bj-seat--sitting-out .bj-seat__bet-circle {
+    font-size: 8px;
+  }
+
+  .bj-seat__round-badge small {
     font-size: 8px;
   }
 }
