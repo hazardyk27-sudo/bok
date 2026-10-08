@@ -26,6 +26,7 @@ export type BlackjackDealSeat = {
 
 export type BlackjackServerActionRequest = {
   expectedRevision: number;
+  idempotencyKey: string;
   action: BlackjackServerActionName;
   seats?: BlackjackDealSeat[];
 };
@@ -66,6 +67,9 @@ export type BlackjackServerSnapshot = {
   revision: number;
   roundId: string | null;
   tableMin: number;
+  wallet: {
+    balanceCents: number;
+  };
   round: BlackjackPublicRound | null;
   allowedActions: BlackjackServerActionName[];
   shoe: {
