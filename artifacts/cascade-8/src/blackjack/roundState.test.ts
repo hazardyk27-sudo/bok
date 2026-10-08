@@ -270,6 +270,7 @@ describe("blackjack player actions and settlement", () => {
       card("6", 2),
       card("7", 3),
       card("5", 4),
+      card("10", 5),
     ];
     const twentyOne = startBlackjackRound(onlySeatOne(), shoeWith(twentyOneCards), 10);
     const finished = hitBlackjackHand(twentyOne.round, twentyOne.shoe);
