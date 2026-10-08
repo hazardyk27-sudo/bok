@@ -108,6 +108,31 @@ describe("BlackjackServerClient", () => {
     expect(client.getSnapshot()?.revision).toBe(3);
   });
 
+  it("forces a GET resync before the next action after an ambiguous failure", async () => {
+    let fetches = 0;
+    let sends = 0;
+    const seenRevisions: number[] = [];
+    const client = new BlackjackServerClient(transport({
+      fetchState: async () => {
+        fetches += 1;
+        return fetches === 1 ? snapshot(10, 1000) : snapshot(11, 1100);
+      },
+      sendAction: async (request) => {
+        sends += 1;
+        seenRevisions.push(request.expectedRevision);
+        if (sends === 1) throw new TypeError("ambiguous network failure");
+        return snapshot(request.expectedRevision + 1, 1200);
+      },
+    }));
+
+    await client.connect();
+    await expect(client.action("hit")).rejects.toThrow("ambiguous network failure");
+    await expect(client.action("stand")).resolves.toMatchObject({ revision: 12 });
+
+    expect(fetches).toBe(2);
+    expect(seenRevisions).toEqual([10, 11]);
+  });
+
   it("uses authoritative GET resync for multi-tab changes and same-revision shared-wallet changes", async () => {
     const states = [
       snapshot(5, 500, 90_000),
