@@ -94,7 +94,13 @@ describe("roulette performance architecture guard", () => {
       "const SNAP_MS = 45;",
     );
     expect(dragSource).toContain(
-      "renderOptimisticBets(app, nextBets);",
+      "setRouletteBetAuthority(",
+    );
+    expect(dragSource).toContain(
+      "renderRouletteBetTopology(app, nextBets);",
+    );
+    expect(dragSource.indexOf("setRouletteBetAuthority(")).toBeLessThan(
+      dragSource.indexOf("renderRouletteBetTopology(app, nextBets);"),
     );
   });
 });

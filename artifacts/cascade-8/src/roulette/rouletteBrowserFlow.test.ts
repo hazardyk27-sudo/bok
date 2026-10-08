@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, type Browser, type Page } from "@playwright/test";
+import { chromium, type Browser, type Page, type Route } from "@playwright/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type ViteDevServer } from "vite";
 import { settleRouletteBets } from "./betRules";
@@ -23,7 +23,7 @@ type WriteBody = {
   roundId: string;
   bets: RouletteBetPlacement[];
   idempotencyKey: string;
-  expectedRevision: number;
+  expectedRevision?: number;
 };
 
 const APP_ROOT = path.resolve(
@@ -116,6 +116,7 @@ describe("roulette real browser wager lifecycle", () => {
   let roundId = "browser-round-1";
   let globalBet: RouletteGlobalBetSnapshot | null = null;
   let walletBalanceCents = 100_000_000;
+  let latestResponseDelayMs = 0;
   const writes: WriteBody[] = [];
 
   function tableSnapshot(): RouletteGlobalTableSnapshot {
@@ -188,10 +189,17 @@ describe("roulette real browser wager lifecycle", () => {
     await page.waitForTimeout(250);
   }
 
-  async function beginRound(id: string) {
+  async function beginRound(
+    id: string,
+    resetWalletCents?: number,
+  ) {
     roundId = id;
     phase = "betting";
     globalBet = null;
+    latestResponseDelayMs = 0;
+    if (resetWalletCents !== undefined) {
+      walletBalanceCents = resetWalletCents;
+    }
     await forceStateRefresh();
     await eventually(async () =>
       (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
@@ -206,6 +214,71 @@ describe("roulette real browser wager lifecycle", () => {
         Object.keys(expected).length === Object.keys(actual).length &&
         Object.entries(expected).every(([key, value]) => actual[key] === value)
       );
+    });
+  }
+
+  async function fulfillWrite(
+    route: Route,
+    body: WriteBody,
+    enforceRevision: boolean,
+  ) {
+    writes.push({
+      ...body,
+      bets: cloneBets(body.bets),
+    });
+
+    if (body.roundId !== roundId || phase !== "betting") {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "ROULETTE_GLOBAL_BETTING_CLOSED" }),
+      });
+      return;
+    }
+
+    const currentRevision = globalBet?.revision ?? 0;
+    if (
+      enforceRevision &&
+      body.expectedRevision !== currentRevision
+    ) {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "ROULETTE_GLOBAL_BET_STALE" }),
+      });
+      return;
+    }
+
+    const delayMs = latestResponseDelayMs;
+    latestResponseDelayMs = 0;
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    const previousStakeCents = globalBet?.stakeCents ?? 0;
+    const nextStakeCents = stakeCents(body.bets);
+    walletBalanceCents += previousStakeCents - nextStakeCents;
+
+    const nextRevision = currentRevision + 1;
+    globalBet = {
+      id: `browser-bet-${roundId}`,
+      roundId,
+      bets: cloneBets(body.bets),
+      stakeCents: nextStakeCents,
+      payoutCents: 0,
+      revision: nextRevision,
+      settlement: null,
+      settledAtMs: null,
+      updatedAtMs: Date.now(),
+    };
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        globalBet,
+        balanceCents: walletBalanceCents,
+      }),
     });
   }
 
@@ -275,53 +348,14 @@ describe("roulette real browser wager lifecycle", () => {
       });
     });
 
+    await page.route("**/api/roulette/global-bets/latest", async (route) => {
+      const body = route.request().postDataJSON() as WriteBody;
+      await fulfillWrite(route, body, false);
+    });
+
     await page.route("**/api/roulette/global-bets", async (route) => {
       const body = route.request().postDataJSON() as WriteBody;
-      writes.push({
-        ...body,
-        bets: cloneBets(body.bets),
-      });
-
-      if (body.roundId !== roundId || phase !== "betting") {
-        await route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "ROULETTE_GLOBAL_BETTING_CLOSED" }),
-        });
-        return;
-      }
-
-      const currentRevision = globalBet?.revision ?? 0;
-      if (body.expectedRevision !== currentRevision) {
-        await route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "ROULETTE_GLOBAL_BET_STALE" }),
-        });
-        return;
-      }
-
-      const nextRevision = currentRevision + 1;
-      globalBet = {
-        id: `browser-bet-${roundId}`,
-        roundId,
-        bets: cloneBets(body.bets),
-        stakeCents: stakeCents(body.bets),
-        payoutCents: 0,
-        revision: nextRevision,
-        settlement: null,
-        settledAtMs: null,
-        updatedAtMs: Date.now(),
-      };
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          globalBet,
-          balanceCents: walletBalanceCents,
-        }),
-      });
+      await fulfillWrite(route, body, true);
     });
 
     await page.goto(`${baseUrl}/roulette`);
@@ -339,8 +373,73 @@ describe("roulette real browser wager lifecycle", () => {
   });
 
   it(
+    "reserves wallet immediately and never resurrects 20 after moving to 19 and increasing there",
+    async () => {
+      await beginRound("browser-user-drag-wallet", 87_000);
+      const balance = page.locator("[data-wallet-balance]").first();
+      await eventually(async () => (await balance.textContent()) === "$870");
+
+      const chip10 = page.locator('.roulette-chip-option[data-chip-value="10"]:visible').first();
+      await chip10.click();
+
+      latestResponseDelayMs = 350;
+      await page.locator('[data-bet-id="straight-20"]').click();
+
+      // This assertion intentionally happens before the delayed server response.
+      // The player's wallet must reserve the stake in the same click task.
+      expect(await balance.textContent()).toBe("$860");
+      expect(globalBet).toBeNull();
+
+      await waitForServerTotals({ "straight-20": 10 });
+      await page.waitForTimeout(100);
+      expect(await balance.textContent()).toBe("$860");
+      expect(await chipState(page, "straight-20")).toMatchObject({ amount: 10 });
+
+      await dragChip(page, "straight-20", "straight-19");
+      await waitForServerTotals({ "straight-19": 10 });
+      await eventually(async () =>
+        (await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()) === 0,
+      );
+      expect(await chipState(page, "straight-19")).toMatchObject({ amount: 10 });
+      expect(await balance.textContent()).toBe("$860");
+
+      await page.waitForTimeout(380);
+      latestResponseDelayMs = 350;
+      await page.locator('[data-bet-id="straight-19"]').click();
+
+      expect(await balance.textContent()).toBe("$850");
+      await waitForServerTotals({ "straight-19": 20 });
+      await page.waitForTimeout(100);
+      expect(await balance.textContent()).toBe("$850");
+      expect(await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()).toBe(0);
+      expect(await chipState(page, "straight-19")).toMatchObject({ amount: 20 });
+
+      phase = "verifying";
+      await forceStateRefresh();
+      await eventually(async () =>
+        (await page.locator("[data-roulette-page]").getAttribute("data-betting-locked")) ===
+        "true",
+      );
+      expect(await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()).toBe(0);
+      expect(await chipState(page, "straight-19")).toMatchObject({ amount: 20 });
+
+      phase = "spinning";
+      await forceStateRefresh();
+      await eventually(async () =>
+        (await page.locator("[data-roulette-wheel]").getAttribute("data-roulette-state")) ===
+        "spinning",
+      );
+      expect(await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()).toBe(0);
+      expect(await chipState(page, "straight-19")).toMatchObject({ amount: 20 });
+      expect(totals(globalBet?.bets ?? [])).toEqual({ "straight-19": 20 });
+    },
+    30_000,
+  );
+
+  it(
     "places, repeatedly moves, reuses the freed source, doubles by value tier, survives verify/spin, and preserves a $1000 board",
     async () => {
+      await beginRound("browser-round-1", 10_000_000);
       const chip10 = page.locator('.roulette-chip-option[data-chip-value="10"]:visible').first();
       await chip10.click();
       await page.locator('[data-bet-id="straight-24"]').click();
@@ -423,7 +522,7 @@ describe("roulette real browser wager lifecycle", () => {
         "settled",
       );
 
-      await beginRound("browser-round-2");
+      await beginRound("browser-round-2", 10_000_000);
       const chip100 = page.locator('.roulette-chip-option[data-chip-value="100"]:visible').first();
       await chip100.click();
       await page.locator('[data-bet-id="straight-30"]').click();
@@ -442,7 +541,7 @@ describe("roulette real browser wager lifecycle", () => {
         "settled",
       );
 
-      await beginRound("browser-round-3");
+      await beginRound("browser-round-3", 10_000_000);
       await page.locator('.roulette-chip-option[data-chip-value="100"]:visible').first().click();
       for (let number = 1; number <= 10; number += 1) {
         await page.locator(`[data-bet-id="straight-${number}"]`).click();

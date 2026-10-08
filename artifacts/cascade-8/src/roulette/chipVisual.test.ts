@@ -81,7 +81,10 @@ describe("roulette casino chip visuals", () => {
     expect(chip.classList.contains("chip-10")).toBe(false);
     expect(chip.style.getPropertyValue("--chip-fill")).toBe("");
     expect(chip.style.getPropertyValue("--casino-chip-inner")).toBe("");
-    expect(chip.style.getPropertyValue("background-color")).toBe("");
+    expect(chip.style.getPropertyValue("background-color")).toBe(
+      "var(--casino-chip-base)",
+    );
+    expect(chip.style.getPropertyPriority("background-color")).toBe("important");
     expect(chip.dataset.chipFaceSourceValue).toBeUndefined();
     expect(chip.dataset.stackDepth).toBeUndefined();
     expect(chip.dataset.chipTier).toBe("white");
@@ -89,17 +92,51 @@ describe("roulette casino chip visuals", () => {
       ROULETTE_CHIP_PALETTES.white.base,
     );
 
+    const fixedPaint = {
+      color: chip.style.getPropertyValue("color"),
+      image: chip.style.getPropertyValue("background-image"),
+      repeat: chip.style.getPropertyValue("background-repeat"),
+      position: chip.style.getPropertyValue("background-position"),
+      size: chip.style.getPropertyValue("background-size"),
+      shadow: chip.style.getPropertyValue("box-shadow"),
+      radius: chip.style.getPropertyValue("border-radius"),
+      filter: chip.style.getPropertyValue("filter"),
+      opacity: chip.style.getPropertyValue("opacity"),
+    };
+
     expect(syncRoulettePlacedChipVisual(chip, 80)).toBe(true);
     expect(chip.dataset.chipTier).toBe("blue");
     expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
       ROULETTE_CHIP_PALETTES.blue.base,
     );
+    expect({
+      color: chip.style.getPropertyValue("color"),
+      image: chip.style.getPropertyValue("background-image"),
+      repeat: chip.style.getPropertyValue("background-repeat"),
+      position: chip.style.getPropertyValue("background-position"),
+      size: chip.style.getPropertyValue("background-size"),
+      shadow: chip.style.getPropertyValue("box-shadow"),
+      radius: chip.style.getPropertyValue("border-radius"),
+      filter: chip.style.getPropertyValue("filter"),
+      opacity: chip.style.getPropertyValue("opacity"),
+    }).toEqual(fixedPaint);
 
     expect(syncRoulettePlacedChipVisual(chip, 160)).toBe(true);
     expect(chip.dataset.chipTier).toBe("green");
     expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
       ROULETTE_CHIP_PALETTES.green.base,
     );
+    expect({
+      color: chip.style.getPropertyValue("color"),
+      image: chip.style.getPropertyValue("background-image"),
+      repeat: chip.style.getPropertyValue("background-repeat"),
+      position: chip.style.getPropertyValue("background-position"),
+      size: chip.style.getPropertyValue("background-size"),
+      shadow: chip.style.getPropertyValue("box-shadow"),
+      radius: chip.style.getPropertyValue("border-radius"),
+      filter: chip.style.getPropertyValue("filter"),
+      opacity: chip.style.getPropertyValue("opacity"),
+    }).toEqual(fixedPaint);
 
     for (const forbidden of [
       "--casino-chip-main",
