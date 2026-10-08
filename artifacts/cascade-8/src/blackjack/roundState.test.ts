@@ -5,6 +5,7 @@ import {
   type BlackjackSuit,
 } from "./blackjackCore";
 import {
+  BLACKJACK_MAX_HANDS_PER_SEAT,
   canDoubleBlackjackHand,
   canSplitBlackjackHand,
   doubleBlackjackHand,
@@ -127,6 +128,7 @@ describe("blackjack initial deal", () => {
       wager: 50,
       status: "blackjack",
       doubled: false,
+      splitFromAces: false,
       result: null,
     });
     expect(result.round.hands[1]).toMatchObject({
@@ -325,7 +327,7 @@ describe("blackjack player actions and dealer resolution", () => {
 });
 
 describe("blackjack double down", () => {
-  it("is available only while the active hand still has its original two cards", () => {
+  it("is available only while the active hand still has two cards", () => {
     const cards = [
       card("5", 0),
       card("10", 1),
@@ -416,7 +418,7 @@ describe("blackjack double down", () => {
   });
 });
 
-describe("blackjack split base", () => {
+describe("blackjack split", () => {
   it("allows equal blackjack values such as 10 + K and creates two independent hands", () => {
     const cards = [
       card("10", 0),
@@ -433,24 +435,26 @@ describe("blackjack split base", () => {
     const split = splitBlackjackHand(started.round, started.shoe);
     expect(split.round.hands).toHaveLength(2);
     expect(split.round.hands[0]).toMatchObject({
-      handId: "seat-1-hand-0",
+      handId: "seat-1-hand-0-L",
       seatId: 1,
       handIndex: 0,
       splitDepth: 1,
+      splitFromAces: false,
       wager: 50,
       status: "playing",
     });
     expect(split.round.hands[1]).toMatchObject({
-      handId: "seat-1-hand-1",
+      handId: "seat-1-hand-0-R",
       seatId: 1,
       handIndex: 1,
       splitDepth: 1,
+      splitFromAces: false,
       wager: 50,
       status: "playing",
     });
     expect(split.round.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["10", "2"]);
     expect(split.round.hands[1]?.cards.map((candidate) => candidate.rank)).toEqual(["K", "3"]);
-    expect(split.round.activeHandId).toBe("seat-1-hand-0");
+    expect(split.round.activeHandId).toBe("seat-1-hand-0-L");
     expect(split.round.activeSeatId).toBe(1);
     expect(split.shoe.nextIndex).toBe(6);
   });
@@ -471,7 +475,7 @@ describe("blackjack split base", () => {
 
     expect(firstStand.round.phase).toBe("playerTurns");
     expect(firstStand.round.activeSeatId).toBe(1);
-    expect(firstStand.round.activeHandId).toBe("seat-1-hand-1");
+    expect(firstStand.round.activeHandId).toBe("seat-1-hand-0-R");
     expect(firstStand.round.hands[0]?.status).toBe("stood");
     expect(firstStand.round.hands[1]?.status).toBe("playing");
 
@@ -500,7 +504,32 @@ describe("blackjack split base", () => {
     expect(split.round.hands.every((hand) => hand.returnAmount === 100)).toBe(true);
   });
 
-  it("disables resplit and double-after-split in Part 8A", () => {
+  it("allows double after split for normal split hands", () => {
+    const cards = [
+      card("8", 0),
+      card("10", 1),
+      card("8", 2, "hearts"),
+      card("7", 3),
+      card("3", 4),
+      card("2", 5),
+      card("10", 6),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const split = splitBlackjackHand(started.round, started.shoe);
+
+    expect(canDoubleBlackjackHand(split.round)).toBe(true);
+
+    const doubled = doubleBlackjackHand(split.round, split.shoe);
+    expect(doubled.round.hands[0]).toMatchObject({
+      handIndex: 0,
+      wager: 100,
+      doubled: true,
+      status: "stood",
+    });
+    expect(doubled.round.activeHandId).toBe("seat-1-hand-0-R");
+  });
+
+  it("resplits normal pairs up to four total hands and blocks a fifth", () => {
     const cards = [
       card("8", 0),
       card("10", 1),
@@ -508,13 +537,49 @@ describe("blackjack split base", () => {
       card("7", 3),
       card("8", 4, "clubs"),
       card("3", 5),
+      card("8", 6, "diamonds"),
+      card("4", 7),
+      card("2", 8),
+      card("5", 9),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const split1 = splitBlackjackHand(started.round, started.shoe);
+    expect(split1.round.hands).toHaveLength(2);
+    expect(canSplitBlackjackHand(split1.round)).toBe(true);
+
+    const split2 = splitBlackjackHand(split1.round, split1.shoe);
+    expect(split2.round.hands).toHaveLength(3);
+    expect(split2.round.hands.map((hand) => hand.handIndex)).toEqual([0, 1, 2]);
+    expect(canSplitBlackjackHand(split2.round)).toBe(true);
+
+    const split3 = splitBlackjackHand(split2.round, split2.shoe);
+    expect(split3.round.hands).toHaveLength(BLACKJACK_MAX_HANDS_PER_SEAT);
+    expect(split3.round.hands.map((hand) => hand.handIndex)).toEqual([0, 1, 2, 3]);
+    expect(canSplitBlackjackHand(split3.round)).toBe(false);
+    expect(split3.round.hands.reduce((total, hand) => total + hand.wager, 0)).toBe(200);
+  });
+
+  it("gives split aces one card per hand, auto-stands them and forbids DAS/resplit", () => {
+    const cards = [
+      card("A", 0),
+      card("10", 1),
+      card("A", 2, "hearts"),
+      card("7", 3),
+      card("A", 4, "clubs"),
+      card("K", 5, "diamonds"),
     ];
     const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
     const split = splitBlackjackHand(started.round, started.shoe);
 
-    expect(split.round.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["8", "8"]);
-    expect(canSplitBlackjackHand(split.round)).toBe(false);
+    expect(split.shoe.nextIndex).toBe(6);
+    expect(split.round.phase).toBe("complete");
+    expect(split.round.hands).toHaveLength(2);
+    expect(split.round.hands.every((hand) => hand.splitFromAces)).toBe(true);
+    expect(split.round.hands.every((hand) => hand.cards.length === 2)).toBe(true);
+    expect(split.round.hands.every((hand) => hand.status === "stood")).toBe(true);
+    expect(split.round.hands.every((hand) => hand.result !== "blackjack")).toBe(true);
     expect(canDoubleBlackjackHand(split.round)).toBe(false);
+    expect(canSplitBlackjackHand(split.round)).toBe(false);
   });
 
   it("does not allow split after HIT or for unequal values", () => {
