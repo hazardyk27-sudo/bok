@@ -9,7 +9,6 @@ import {
   createRouletteBetState,
   doubleRouletteBets,
   getRouletteBetTotals,
-  getRouletteDisplayChipValue,
   getRouletteTotalStake,
   isRouletteChipValue,
   placeRouletteBet,
@@ -73,50 +72,12 @@ import {
   formatRouletteBalance,
   formatRouletteMoney,
   formatRouletteSignedMoney,
-  getRouletteAmountScale,
   getRouletteBalanceScale,
 } from "./uiFormat";
+import {
+  createRouletteCanonicalPlacedChip,
+} from "./canonicalPlacedChip";
 import { renderRouletteWheel } from "./wheelRenderer";
-
-const ROULETTE_PLACED_CHIP_PALETTE: Record<
-  RouletteChipValue,
-  {
-    fill: string;
-    ink: string;
-    edge: string;
-  }
-> = {
-  1: {
-    fill: "#e7ebee",
-    ink: "#111315",
-    edge: "#ffffff",
-  },
-  5: {
-    fill: "#e05249",
-    ink: "#ffffff",
-    edge: "#ffaaa3",
-  },
-  10: {
-    fill: "#3b8ce0",
-    ink: "#ffffff",
-    edge: "#9acbff",
-  },
-  25: {
-    fill: "#34a96d",
-    ink: "#ffffff",
-    edge: "#a0e6bd",
-  },
-  100: {
-    fill: "#4a5157",
-    ink: "#ffffff",
-    edge: "#b6bdc2",
-  },
-  500: {
-    fill: "#8b65c4",
-    ink: "#ffffff",
-    edge: "#d2baf0",
-  },
-};
 
 type RouletteViewState = {
   rotorAngle: number;
@@ -1217,7 +1178,6 @@ export function mountRoulette(app: HTMLDivElement) {
     updateSpinAvailability();
   };
 
-
   const renderBetState = () => {
     const totals =
       getRouletteBetTotals(
@@ -1271,71 +1231,11 @@ export function mountRoulette(app: HTMLDivElement) {
           `${baseAriaLabel}, bet ${amount}`,
         );
 
-        const displayChip =
-          getRouletteDisplayChipValue(
+        cell.append(
+          createRouletteCanonicalPlacedChip(
             amount,
-          );
-        const chip =
-          document.createElement("span");
-        chip.className =
-          `roulette-placed-chip chip-${displayChip}`;
-        const chipPalette =
-          ROULETTE_PLACED_CHIP_PALETTE[
-            displayChip
-          ];
-        chip.style.setProperty(
-          "--chip-fill",
-          chipPalette.fill,
+          ),
         );
-        chip.style.setProperty(
-          "--chip-ink",
-          chipPalette.ink,
-        );
-        chip.style.setProperty(
-          "--chip-edge",
-          chipPalette.edge,
-        );
-        const displayAmount =
-          formatRouletteAmount(
-            amount,
-          );
-        chip.dataset.betAmount =
-          String(amount);
-        chip.dataset.amountScale =
-          getRouletteAmountScale(
-            amount,
-          );
-        const compactSuffix =
-          /[KM]$/.test(displayAmount)
-            ? displayAmount.slice(-1)
-            : "";
-        const compactNumber =
-          compactSuffix
-            ? displayAmount.slice(0, -1)
-            : displayAmount;
-        const amountValue =
-          document.createElement("span");
-        amountValue.className =
-          "roulette-placed-chip__value";
-        amountValue.textContent =
-          compactNumber;
-        chip.append(amountValue);
-
-        if (compactSuffix) {
-          const amountSuffix =
-            document.createElement("span");
-          amountSuffix.className =
-            "roulette-placed-chip__suffix";
-          amountSuffix.textContent =
-            compactSuffix;
-          chip.append(amountSuffix);
-        }
-
-        chip.setAttribute(
-          "aria-hidden",
-          "true",
-        );
-        cell.append(chip);
       });
 
     app
@@ -1879,7 +1779,6 @@ export function mountRoulette(app: HTMLDivElement) {
             (bet) => ({
               ...bet,
             }),
-          ),
       };
       serverReservedStakeCents =
         serverBet.stakeCents;
@@ -2225,7 +2124,7 @@ export function mountRoulette(app: HTMLDivElement) {
 
       if (
         document.visibilityState ===
-        "hidden"
+          "hidden"
       ) {
         return;
       }
