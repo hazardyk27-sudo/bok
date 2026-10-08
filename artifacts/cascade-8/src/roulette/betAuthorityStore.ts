@@ -52,12 +52,10 @@ export function setRouletteAuthorityStore(
 
 export function setRouletteAuthorityStoreBets(
   bets: readonly RouletteAuthorityPlacement[],
-  optimistic: boolean = authorityStore.optimistic,
 ) {
   authorityStore = {
     ...authorityStore,
     bets: cloneBets(bets),
-    optimistic,
   };
 }
 
