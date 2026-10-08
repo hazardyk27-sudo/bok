@@ -104,7 +104,10 @@ export class BlackjackServerClient {
           error.message === "BLACKJACK_STALE_REVISION"
         ) {
           const latest = error.snapshot ?? await this.transport.fetchState();
-          this.acceptSnapshot(latest);
+          // Adopt stale recovery silently. UI callers handle the stale error and
+          // render the authoritative snapshot without pretending the rejected
+          // click produced that state/animation.
+          this.acceptSnapshot(latest, false);
           this.requiresResync = false;
           throw new BlackjackStaleActionError(this.snapshot ?? latest);
         }
@@ -128,9 +131,13 @@ export class BlackjackServerClient {
     this.listeners.clear();
   }
 
-  private acceptSnapshot(snapshot: BlackjackServerSnapshot): void {
+  private acceptSnapshot(
+    snapshot: BlackjackServerSnapshot,
+    notify = true,
+  ): void {
     if (!shouldAcceptSnapshot(this.snapshot, snapshot)) return;
     this.snapshot = snapshot;
+    if (!notify) return;
     for (const listener of this.listeners) listener(snapshot);
   }
 }
