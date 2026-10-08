@@ -27,6 +27,7 @@ export type BlackjackRoundHand = {
   wager: number;
   cards: BlackjackCard[];
   status: BlackjackRoundHandStatus;
+  doubled: boolean;
   result: BlackjackHandResult | null;
   returnAmount: number | null;
   netAmount: number | null;
@@ -280,6 +281,64 @@ export function standBlackjackHand(
   );
 }
 
+export function canDoubleBlackjackHand(round: BlackjackRoundState): boolean {
+  if (round.phase !== "playerTurns" || round.activeSeatId === null) {
+    return false;
+  }
+
+  const activeHand = round.hands.find(
+    (hand) => hand.seatId === round.activeSeatId,
+  );
+
+  return Boolean(
+    activeHand &&
+      activeHand.status === "playing" &&
+      activeHand.cards.length === 2 &&
+      !activeHand.doubled,
+  );
+}
+
+export function doubleBlackjackHand(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+): BlackjackRoundMutationResult {
+  if (!canDoubleBlackjackHand(round) || round.activeSeatId === null) {
+    return { round, shoe };
+  }
+
+  const handIndex = round.hands.findIndex(
+    (hand) => hand.seatId === round.activeSeatId,
+  );
+  const activeHand = round.hands[handIndex];
+
+  if (!activeHand) {
+    return { round, shoe };
+  }
+
+  const drawn = drawBlackjackCard(shoe);
+  const cards = [...activeHand.cards, drawn.card];
+  const value = evaluateBlackjackHand(cards);
+  const status: BlackjackRoundHandStatus = value.bust ? "bust" : "stood";
+
+  const hands = round.hands.map((hand, index) =>
+    index === handIndex
+      ? {
+          ...hand,
+          cards,
+          wager: hand.wager * 2,
+          doubled: true,
+          status,
+        }
+      : hand,
+  );
+
+  return advanceAfterFinishedHand(
+    { ...round, hands },
+    drawn.shoe,
+    activeHand.seatId,
+  );
+}
+
 export function startBlackjackRound(
   state: BlackjackSeatState,
   shoe: BlackjackShoe,
@@ -307,6 +366,7 @@ export function startBlackjackRound(
       wager: seat.bet,
       cards: [],
       status: "playing",
+      doubled: false,
       result: null,
       returnAmount: null,
       netAmount: null,
