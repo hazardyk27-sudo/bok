@@ -58,6 +58,28 @@ describe("sendBlackjackServerActionReliable", () => {
     expect(JSON.parse(bodies[0] ?? "{}").idempotencyKey).toBe(request.idempotencyKey);
   });
 
+  it("retries a non-JSON 5xx gateway response with the same idempotent request", async () => {
+    const bodies: string[] = [];
+    let attempt = 0;
+    globalThis.fetch = vi.fn(async (_input, init) => {
+      bodies.push(String(init?.body ?? ""));
+      attempt += 1;
+      if (attempt === 1) {
+        return new Response("bad gateway", { status: 502 });
+      }
+      return new Response(JSON.stringify(snapshot(5)), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    await expect(sendBlackjackServerActionReliable(request, 1)).resolves.toMatchObject({
+      revision: 5,
+    });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]).toBe(bodies[1]);
+  });
+
   it("does not retry a stale revision and exposes the authoritative recovery snapshot", async () => {
     const latest = snapshot(6);
     let attempts = 0;
