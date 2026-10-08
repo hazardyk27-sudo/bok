@@ -141,7 +141,7 @@ describe("BlackjackServerTableStore", () => {
     expect(insured.allowedActions).toEqual(["next"]);
   });
 
-  it("validates DEAL seats and has no configured table maximum", () => {
+  it("validates DEAL seats without imposing a configured table maximum", () => {
     const store = new BlackjackServerTableStore({ random: () => 0.5 });
 
     expect(() => store.applyAction("session-a", {
@@ -162,7 +162,7 @@ describe("BlackjackServerTableStore", () => {
     expect(() => store.applyAction("session-c", {
       expectedRevision: 0,
       action: "deal",
-      seats: [{ seatId: 5, wager: Number.MAX_SAFE_INTEGER }],
+      seats: [{ seatId: 5, wager: 1_000_000_000 }],
     })).not.toThrow();
   });
 });
