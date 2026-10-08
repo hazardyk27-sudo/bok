@@ -2,6 +2,17 @@ import "./blackjack.css";
 import "./mobile.css";
 import "./seatState.css";
 import "./betting.css";
+import "./round.css";
+import {
+  evaluateBlackjackHand,
+  type BlackjackCard,
+  type BlackjackSuit,
+} from "./blackjackCore";
+import {
+  getBlackjackRoundReadiness,
+  startBlackjackRound,
+  type BlackjackRoundState,
+} from "./roundState";
 import {
   addSeatChip,
   clearSeatBet,
@@ -20,39 +31,9 @@ import {
   type BlackjackSeatId,
   type BlackjackSeatState,
 } from "./seatState";
-
-type DemoCard = { rank: string; suit: string; red?: boolean };
-
-type DemoHand = {
-  total: number;
-  cards: DemoCard[];
-};
+import { createBlackjackShoe, type BlackjackShoe } from "./shoe";
 
 const TABLE_MIN = 10;
-
-const DEMO_HANDS: Partial<Record<BlackjackSeatId, DemoHand>> = {
-  1: {
-    total: 19,
-    cards: [
-      { rank: "A", suit: "♠" },
-      { rank: "8", suit: "♠" },
-    ],
-  },
-  3: {
-    total: 16,
-    cards: [
-      { rank: "9", suit: "♥", red: true },
-      { rank: "7", suit: "♦", red: true },
-    ],
-  },
-  5: {
-    total: 16,
-    cards: [
-      { rank: "K", suit: "♠" },
-      { rank: "6", suit: "♣" },
-    ],
-  },
-};
 
 const CHIP_VARIANT: Record<BlackjackChipValue, string> = {
   1: "white",
@@ -62,12 +43,26 @@ const CHIP_VARIANT: Record<BlackjackChipValue, string> = {
   500: "black",
 };
 
-function renderCard(card: DemoCard) {
+const SUIT_SYMBOL: Record<BlackjackSuit, string> = {
+  clubs: "♣",
+  diamonds: "♦",
+  hearts: "♥",
+  spades: "♠",
+};
+
+function renderCard(card: BlackjackCard, hidden = false) {
+  if (hidden) {
+    return `<div class="bj-card bj-card--back" aria-label="Dealer hole card"></div>`;
+  }
+
+  const suit = SUIT_SYMBOL[card.suit];
+  const red = card.suit === "diamonds" || card.suit === "hearts";
+
   return `
-    <div class="bj-card${card.red ? " bj-card--red" : ""}" aria-label="${card.rank}${card.suit}">
+    <div class="bj-card${red ? " bj-card--red" : ""}" aria-label="${card.rank}${suit}">
       <span class="bj-card__rank">${card.rank}</span>
-      <span class="bj-card__suit">${card.suit}</span>
-      <span class="bj-card__pip">${card.suit}</span>
+      <span class="bj-card__suit">${suit}</span>
+      <span class="bj-card__pip">${suit}</span>
     </div>
   `;
 }
@@ -90,13 +85,15 @@ function renderWagerChips(seat: BlackjackSeat) {
   `;
 }
 
-function renderEmptySeat(seat: BlackjackSeat) {
+function renderEmptySeat(seat: BlackjackSeat, locked = false) {
   return `
     <div class="bj-seat bj-seat--${seat.id} bj-seat--empty" data-seat="${seat.id}" data-seat-status="empty">
       <div class="bj-seat__bet-circle">
         <div class="bj-seat__empty-icon" aria-hidden="true">♣</div>
         <div class="bj-seat__empty-copy">SEAT ${seat.id} · EMPTY</div>
-        <button class="bj-seat__take-seat" type="button" data-seat-action="sit" data-seat-id="${seat.id}">TAKE SEAT</button>
+        ${locked
+          ? `<span class="bj-round-lock-note">ROUND IN PROGRESS</span>`
+          : `<button class="bj-seat__take-seat" type="button" data-seat-action="sit" data-seat-id="${seat.id}">TAKE SEAT</button>`}
       </div>
     </div>
   `;
@@ -124,14 +121,9 @@ function renderSeatedSeat(seat: BlackjackSeat, selected: boolean) {
 }
 
 function renderReadySeat(seat: BlackjackSeat, selected: boolean) {
-  const hand = DEMO_HANDS[seat.id];
-
   return `
     <div class="bj-seat bj-seat--${seat.id} bj-seat--active${selected ? " is-selected" : ""}" data-seat="${seat.id}" data-seat-status="betReady">
-      ${hand ? `<div class="bj-seat__total">${hand.total}</div>` : ""}
-      <div class="bj-seat__cards">
-        ${hand?.cards.map(renderCard).join("") ?? ""}
-      </div>
+      <div class="bj-seat__bet-circle"></div>
       ${renderWagerChips(seat)}
       <div class="bj-seat__bet">$${seat.bet}</div>
       <button class="bj-seat__badge" type="button" data-seat-action="select" data-seat-id="${seat.id}" aria-pressed="${selected}">
@@ -143,7 +135,10 @@ function renderReadySeat(seat: BlackjackSeat, selected: boolean) {
   `;
 }
 
-function renderSeat(seat: BlackjackSeat, selectedSeatId: BlackjackSeatId | null) {
+function renderBettingSeat(
+  seat: BlackjackSeat,
+  selectedSeatId: BlackjackSeatId | null,
+) {
   const selected = seat.id === selectedSeatId;
 
   if (seat.status === "empty") {
@@ -157,7 +152,54 @@ function renderSeat(seat: BlackjackSeat, selectedSeatId: BlackjackSeatId | null)
   return renderReadySeat(seat, selected);
 }
 
-function chipButton(value: BlackjackChipValue, selectedChip: BlackjackChipValue) {
+function renderRoundSeat(
+  seat: BlackjackSeat,
+  round: BlackjackRoundState,
+) {
+  const hand = round.hands.find((candidate) => candidate.seatId === seat.id);
+
+  if (!hand) {
+    if (seat.status === "empty") {
+      return renderEmptySeat(seat, true);
+    }
+
+    return `
+      <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--sitting-out" data-seat="${seat.id}" data-seat-status="sittingOut">
+        <div class="bj-seat__bet-circle">SITTING OUT</div>
+        <div class="bj-seat__badge bj-seat__round-badge">
+          <span class="bj-seat__person" aria-hidden="true"></span>
+          <span><strong>Seat ${seat.id}</strong><small>NO WAGER</small></span>
+        </div>
+      </div>
+    `;
+  }
+
+  const value = evaluateBlackjackHand(hand.cards);
+  const active = round.activeSeatId === seat.id;
+  const blackjack = hand.status === "blackjack";
+  const stateCopy = blackjack ? "BLACKJACK" : active ? "YOUR TURN" : "IN ROUND";
+
+  return `
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${blackjack ? " is-blackjack" : ""}" data-seat="${seat.id}" data-seat-status="inRound">
+      <div class="bj-seat__total">${value.total}</div>
+      <div class="bj-seat__cards">
+        ${hand.cards.map((card) => renderCard(card)).join("")}
+      </div>
+      ${renderWagerChips(seat)}
+      <div class="bj-seat__bet">$${hand.wager}</div>
+      <div class="bj-seat__badge bj-seat__round-badge">
+        <span class="bj-seat__person" aria-hidden="true"></span>
+        <span><strong>Seat ${seat.id}</strong><small>${stateCopy}</small></span>
+      </div>
+    </div>
+  `;
+}
+
+function chipButton(
+  value: BlackjackChipValue,
+  selectedChip: BlackjackChipValue,
+  locked: boolean,
+) {
   const selected = value === selectedChip;
   return `
     <button
@@ -166,20 +208,41 @@ function chipButton(value: BlackjackChipValue, selectedChip: BlackjackChipValue)
       data-chip-value="${value}"
       aria-label="Select $${value} chip"
       aria-pressed="${selected}"
+      ${locked ? "disabled" : ""}
     >
       <span>$${value}</span>
     </button>
   `;
 }
 
-function renderMobileSeatTabs(state: BlackjackSeatState) {
+function renderMobileSeatTabs(
+  state: BlackjackSeatState,
+  round: BlackjackRoundState | null,
+) {
   return `
     <nav class="bj-mobile-seat-tabs" aria-label="Blackjack seats">
       ${state.seats.map((seat) => {
-        const selected = state.selectedSeatId === seat.id;
+        const hand = round?.hands.find((candidate) => candidate.seatId === seat.id);
+        const selected = round
+          ? round.activeSeatId === seat.id
+          : state.selectedSeatId === seat.id;
         const occupied = seat.status !== "empty";
         const ready = seat.status === "betReady";
-        const label = ready ? "READY" : occupied ? "SEATED" : "SIT";
+        const label = round
+          ? hand?.status === "blackjack"
+            ? "BJ"
+            : hand
+              ? selected
+                ? "TURN"
+                : "PLAY"
+              : occupied
+                ? "OUT"
+                : "EMPTY"
+          : ready
+            ? "READY"
+            : occupied
+              ? "SEATED"
+              : "SIT";
 
         return `
           <button
@@ -188,6 +251,7 @@ function renderMobileSeatTabs(state: BlackjackSeatState) {
             data-mobile-seat="${seat.id}"
             aria-label="Seat ${seat.id}, ${label.toLowerCase()}"
             aria-pressed="${selected}"
+            ${round ? "disabled" : ""}
           >
             <strong>${seat.id}</strong>
             <small>${label}</small>
@@ -198,32 +262,83 @@ function renderMobileSeatTabs(state: BlackjackSeatState) {
   `;
 }
 
-function renderStatusCopy(state: BlackjackSeatState, selectedChip: BlackjackChipValue) {
-  const occupied = getOccupiedSeats(state);
-  const selected = state.selectedSeatId;
+function renderBettingStatusCopy(
+  state: BlackjackSeatState,
+  selectedChip: BlackjackChipValue,
+) {
+  const readiness = getBlackjackRoundReadiness(state, TABLE_MIN);
 
-  if (occupied.length === 0) {
-    return "Choose a seat to start";
+  if (readiness.blockingSeatIds.length > 0) {
+    const seatId = readiness.blockingSeatIds[0];
+    const seat = seatId ? getSeat(state, seatId) : null;
+    const remaining = seat ? TABLE_MIN - seat.bet : TABLE_MIN;
+    return `Seat ${seatId ?? "?"} needs $${remaining} more to reach table min`;
   }
 
-  const selectedSeat = selected ? getSeat(state, selected) : null;
-  const selectedBet = selectedSeat ? ` · Bet $${selectedSeat.bet}` : "";
+  if (readiness.participatingSeatIds.length > 0) {
+    return `${readiness.participatingSeatIds.length} hand${readiness.participatingSeatIds.length === 1 ? "" : "s"} ready · $${selectedChip} chip selected`;
+  }
 
-  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""}${selectedBet} · $${selectedChip} chip`;
+  if (getOccupiedSeats(state).length > 0) {
+    return "Place at least one $10+ wager to deal";
+  }
+
+  return "Choose a seat to start";
+}
+
+function renderRoundStatusCopy(round: BlackjackRoundState) {
+  if (round.phase === "playerTurns" && round.activeSeatId) {
+    const activeHand = round.hands.find((hand) => hand.seatId === round.activeSeatId);
+    const total = activeHand
+      ? evaluateBlackjackHand(activeHand.cards).total
+      : null;
+    return `Seat ${round.activeSeatId} to act${total === null ? "" : ` · Total ${total}`}`;
+  }
+
+  if (round.dealer.blackjack) {
+    return "Dealer blackjack check pending";
+  }
+
+  return "Dealer resolution pending";
+}
+
+function renderDealerHand(round: BlackjackRoundState | null) {
+  if (!round) {
+    return `
+      <div class="bj-dealer-hand">
+        <div class="bj-dealer-hand__label">DEALER</div>
+        <span class="bj-dealer-hand__waiting">WAITING FOR DEAL</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="bj-dealer-hand">
+      <div class="bj-dealer-hand__label">DEALER</div>
+      <div class="bj-dealer-hand__cards">
+        ${renderCard(round.dealer.cards[0])}
+        ${renderCard(round.dealer.cards[1], true)}
+        <span class="bj-dealer-hand__total">?</span>
+      </div>
+    </div>
+  `;
 }
 
 function renderBlackjack(
   app: HTMLDivElement,
   state: BlackjackSeatState,
   selectedChip: BlackjackChipValue,
+  round: BlackjackRoundState | null,
 ) {
   const totalBet = getTotalSeatBet(state);
   const selectedSeat = state.selectedSeatId ? getSeat(state, state.selectedSeatId) : null;
-  const canPlaceBet = selectedSeat !== null && selectedSeat.status !== "empty";
+  const bettingLocked = round !== null;
+  const canPlaceBet = !bettingLocked && selectedSeat !== null && selectedSeat.status !== "empty";
   const hasSelectedBet = canPlaceBet && selectedSeat.bet > 0;
+  const readiness = getBlackjackRoundReadiness(state, TABLE_MIN);
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="4b">
+    <main class="bj-root" data-blackjack-part="5b">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -249,8 +364,11 @@ function renderBlackjack(
 
         <aside class="bj-hud bj-hud--status">
           <span>ROUND STATUS</span>
-          <strong>PLACE YOUR BETS</strong>
-          <small>${renderStatusCopy(state, selectedChip)}</small>
+          <strong>${round ? (round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER CHECK") : "PLACE YOUR BETS"}</strong>
+          <small>${round ? renderRoundStatusCopy(round) : renderBettingStatusCopy(state, selectedChip)}</small>
+          ${round
+            ? ""
+            : `<button class="bj-deal-round" type="button" data-round-action="deal" ${readiness.canDeal ? "" : "disabled"}>DEAL${readiness.participatingSeatIds.length > 0 ? ` · ${readiness.participatingSeatIds.length} HAND${readiness.participatingSeatIds.length === 1 ? "" : "S"}` : ""}</button>`}
         </aside>
 
         <div class="bj-dealer-zone" aria-label="Dealer">
@@ -288,14 +406,7 @@ function renderBlackjack(
           <div class="bj-rail bj-rail--outer"></div>
           <div class="bj-rail bj-rail--inner"></div>
           <div class="bj-felt">
-            <div class="bj-dealer-hand">
-              <div class="bj-dealer-hand__label">DEALER</div>
-              <div class="bj-dealer-hand__cards">
-                ${renderCard({ rank: "Q", suit: "♠" })}
-                ${renderCard({ rank: "2", suit: "♥", red: true })}
-                <span class="bj-dealer-hand__total">12</span>
-              </div>
-            </div>
+            ${renderDealerHand(round)}
 
             <div class="bj-table-copy" aria-hidden="true">
               <div>BLACKJACK PAYS 3 TO 2</div>
@@ -307,40 +418,44 @@ function renderBlackjack(
             <div class="bj-table-arc bj-table-arc--inner" aria-hidden="true"></div>
 
             <div class="bj-seats">
-              ${state.seats.map((seat) => renderSeat(seat, state.selectedSeatId)).join("")}
+              ${state.seats.map((seat) =>
+                round
+                  ? renderRoundSeat(seat, round)
+                  : renderBettingSeat(seat, state.selectedSeatId),
+              ).join("")}
             </div>
           </div>
         </div>
 
-        ${renderMobileSeatTabs(state)}
+        ${renderMobileSeatTabs(state, round)}
 
         <section class="bj-console" aria-label="Blackjack controls">
           <div class="bj-console__chips" aria-label="Select chip">
-            <button class="bj-chip-arrow" type="button" aria-label="Previous chips">‹</button>
-            ${chipButton(1, selectedChip)}
-            ${chipButton(5, selectedChip)}
-            ${chipButton(25, selectedChip)}
-            ${chipButton(100, selectedChip)}
-            ${chipButton(500, selectedChip)}
-            <button class="bj-chip-arrow" type="button" aria-label="Next chips">›</button>
+            <button class="bj-chip-arrow" type="button" aria-label="Previous chips" ${bettingLocked ? "disabled" : ""}>‹</button>
+            ${chipButton(1, selectedChip, bettingLocked)}
+            ${chipButton(5, selectedChip, bettingLocked)}
+            ${chipButton(25, selectedChip, bettingLocked)}
+            ${chipButton(100, selectedChip, bettingLocked)}
+            ${chipButton(500, selectedChip, bettingLocked)}
+            <button class="bj-chip-arrow" type="button" aria-label="Next chips" ${bettingLocked ? "disabled" : ""}>›</button>
           </div>
 
           <div class="bj-console__bet-actions">
             <button class="bj-action bj-action--place" type="button" data-bet-action="place" ${canPlaceBet ? "" : "disabled"}>
               <span class="bj-action__icon">＋</span>
-              <span><strong>PLACE BET</strong><small>${state.selectedSeatId ? `Seat ${state.selectedSeatId} · +$${selectedChip}` : "Select seat"}</small></span>
+              <span><strong>PLACE BET</strong><small>${bettingLocked ? "Round locked" : state.selectedSeatId ? `Seat ${state.selectedSeatId} · +$${selectedChip}` : "Select seat"}</small></span>
             </button>
             <button class="bj-action bj-action--neutral" type="button" data-bet-action="undo" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">↶</span>
-              <span><strong>UNDO</strong><small>${hasSelectedBet ? "Last chip" : "No bet"}</small></span>
+              <span><strong>UNDO</strong><small>${hasSelectedBet ? "Last chip" : bettingLocked ? "Round locked" : "No bet"}</small></span>
             </button>
             <button class="bj-action bj-action--gold" type="button" data-bet-action="double" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">X2</span>
-              <span><strong>X2 BET</strong><small>${hasSelectedBet ? `+$${selectedSeat?.bet ?? 0}` : "Place bet first"}</small></span>
+              <span><strong>X2 BET</strong><small>${hasSelectedBet ? `+$${selectedSeat?.bet ?? 0}` : bettingLocked ? "Round locked" : "Place bet first"}</small></span>
             </button>
             <button class="bj-action bj-action--neutral" type="button" data-bet-action="clear" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">⌫</span>
-              <span><strong>CLEAR BET</strong><small>${hasSelectedBet ? `Return $${selectedSeat?.bet ?? 0}` : "No bet"}</small></span>
+              <span><strong>CLEAR BET</strong><small>${hasSelectedBet ? `Return $${selectedSeat?.bet ?? 0}` : bettingLocked ? "Round locked" : "No bet"}</small></span>
             </button>
           </div>
 
@@ -364,8 +479,10 @@ function parseSeatId(value: string | undefined): BlackjackSeatId | null {
 export function mountBlackjack(app: HTMLDivElement) {
   let state = createInitialSeatState();
   let selectedChip: BlackjackChipValue = 25;
+  let shoe: BlackjackShoe = createBlackjackShoe();
+  let round: BlackjackRoundState | null = null;
 
-  const rerender = () => renderBlackjack(app, state, selectedChip);
+  const rerender = () => renderBlackjack(app, state, selectedChip, round);
 
   app.addEventListener("click", (event) => {
     const target = event.target;
@@ -373,9 +490,22 @@ export function mountBlackjack(app: HTMLDivElement) {
       return;
     }
 
-    const chipButton = target.closest<HTMLElement>("[data-chip-value]");
-    if (chipButton) {
-      const chipValue = Number(chipButton.dataset.chipValue);
+    const roundAction = target.closest<HTMLElement>("[data-round-action]");
+    if (roundAction?.dataset.roundAction === "deal" && round === null) {
+      const result = startBlackjackRound(state, shoe, TABLE_MIN);
+      round = result.round;
+      shoe = result.shoe;
+      rerender();
+      return;
+    }
+
+    const chipControl = target.closest<HTMLElement>("[data-chip-value]");
+    if (chipControl) {
+      if (round) {
+        return;
+      }
+
+      const chipValue = Number(chipControl.dataset.chipValue);
       if (!isBlackjackChipValue(chipValue)) {
         return;
       }
@@ -387,7 +517,7 @@ export function mountBlackjack(app: HTMLDivElement) {
 
     const betAction = target.closest<HTMLElement>("[data-bet-action]");
     if (betAction) {
-      if (!state.selectedSeatId) {
+      if (round || !state.selectedSeatId) {
         return;
       }
 
@@ -414,6 +544,10 @@ export function mountBlackjack(app: HTMLDivElement) {
 
     const mobileSeat = target.closest<HTMLElement>("[data-mobile-seat]");
     if (mobileSeat) {
+      if (round) {
+        return;
+      }
+
       const seatId = parseSeatId(mobileSeat.dataset.mobileSeat);
       if (!seatId) {
         return;
@@ -427,7 +561,7 @@ export function mountBlackjack(app: HTMLDivElement) {
     }
 
     const action = target.closest<HTMLElement>("[data-seat-action]");
-    if (!action) {
+    if (!action || round) {
       return;
     }
 
