@@ -47,7 +47,7 @@ export type BlackjackServerTableOptions = {
   createShoe?: () => BlackjackShoe;
 };
 
-function secureRandom(): number {
+export function secureBlackjackRandom(): number {
   return randomInt(0, 0x1_0000_0000) / 0x1_0000_0000;
 }
 
@@ -55,7 +55,9 @@ function isSeatId(value: number): value is BlackjackSeatId {
   return SEAT_IDS.includes(value as BlackjackSeatId);
 }
 
-function normalizeDealSeats(seats: readonly BlackjackDealSeat[] | undefined): BlackjackDealSeat[] {
+export function normalizeBlackjackDealSeats(
+  seats: readonly BlackjackDealSeat[] | undefined,
+): BlackjackDealSeat[] {
   if (!Array.isArray(seats) || seats.length < 1 || seats.length > 5) {
     throw new Error("BLACKJACK_DEAL_SEATS_REQUIRED");
   }
@@ -64,11 +66,16 @@ function normalizeDealSeats(seats: readonly BlackjackDealSeat[] | undefined): Bl
   const normalized = seats.map((seat) => {
     const seatId = Number(seat?.seatId);
     const wager = Number(seat?.wager);
+    const wagerCents = wager * 100;
 
     if (!Number.isInteger(seatId) || !isSeatId(seatId)) {
       throw new Error("BLACKJACK_INVALID_SEAT");
     }
-    if (!Number.isSafeInteger(wager) || wager < BLACKJACK_TABLE_MIN) {
+    if (
+      !Number.isSafeInteger(wager) ||
+      wager < BLACKJACK_TABLE_MIN ||
+      !Number.isSafeInteger(wagerCents)
+    ) {
       throw new Error("BLACKJACK_INVALID_WAGER");
     }
     if (seen.has(seatId)) {
@@ -100,7 +107,9 @@ function seatStateForDeal(seats: readonly BlackjackDealSeat[]): BlackjackSeatSta
   };
 }
 
-function allowedActionsFor(round: BlackjackRoundState | null): BlackjackServerActionName[] {
+export function allowedBlackjackServerActions(
+  round: BlackjackRoundState | null,
+): BlackjackServerActionName[] {
   if (!round) {
     return ["deal"];
   }
@@ -125,7 +134,7 @@ function allowedActionsFor(round: BlackjackRoundState | null): BlackjackServerAc
   return [];
 }
 
-function publicRound(round: BlackjackRoundState): BlackjackPublicRound {
+export function publicBlackjackRound(round: BlackjackRoundState): BlackjackPublicRound {
   const upcard = round.dealer.cards[0];
   if (!upcard) {
     throw new Error("BLACKJACK_DEALER_UPCARD_MISSING");
@@ -149,51 +158,171 @@ function publicRound(round: BlackjackRoundState): BlackjackPublicRound {
   };
 }
 
+export function createBlackjackServerSession(
+  options: BlackjackServerTableOptions = {},
+): BlackjackServerTableSession {
+  const random = options.random ?? secureBlackjackRandom;
+  const createShoe = options.createShoe ?? (() => createBlackjackShoe(random));
+
+  return {
+    revision: 0,
+    roundId: null,
+    round: null,
+    shoe: createShoe(),
+  };
+}
+
+export function snapshotBlackjackServerSession(
+  session: BlackjackServerTableSession,
+  walletBalanceCents: number,
+  now: () => number = Date.now,
+): BlackjackServerSnapshot {
+  return {
+    revision: session.revision,
+    roundId: session.roundId,
+    tableMin: BLACKJACK_TABLE_MIN,
+    wallet: { balanceCents: walletBalanceCents },
+    round: session.round ? publicBlackjackRound(session.round) : null,
+    allowedActions: allowedBlackjackServerActions(session.round),
+    shoe: {
+      cardsRemaining: Math.max(0, session.shoe.cards.length - session.shoe.nextIndex),
+      shufflePending: session.shoe.shufflePending,
+    },
+    serverTimeMs: now(),
+  };
+}
+
+export function transitionBlackjackServerSession(
+  current: BlackjackServerTableSession,
+  request: BlackjackServerActionRequest,
+  options: BlackjackServerTableOptions = {},
+): BlackjackServerTableSession {
+  if (!Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 0) {
+    throw new Error("BLACKJACK_REVISION_REQUIRED");
+  }
+  if (request.expectedRevision !== current.revision) {
+    throw new Error("BLACKJACK_STALE_REVISION");
+  }
+
+  const random = options.random ?? secureBlackjackRandom;
+  const createRoundId = options.createRoundId ?? randomUUID;
+
+  let round = current.round;
+  let shoe = current.shoe;
+  let roundId = current.roundId;
+
+  switch (request.action) {
+    case "deal": {
+      if (round !== null) {
+        throw new Error("BLACKJACK_ROUND_ALREADY_ACTIVE");
+      }
+      const seats = normalizeBlackjackDealSeats(request.seats);
+      const started = startBlackjackRound(
+        seatStateForDeal(seats),
+        shoe,
+        BLACKJACK_TABLE_MIN,
+      );
+      round = started.round;
+      shoe = started.shoe;
+      roundId = createRoundId();
+      break;
+    }
+    case "hit": {
+      if (!round || round.phase !== "playerTurns") {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = hitBlackjackHand(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "stand": {
+      if (!round || round.phase !== "playerTurns") {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = standBlackjackHand(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "double": {
+      if (!round || !canDoubleBlackjackHand(round)) {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = doubleBlackjackHand(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "split": {
+      if (!round || !canSplitBlackjackHand(round)) {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = splitBlackjackHand(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "insurance": {
+      if (!round || !canTakeBlackjackInsurance(round)) {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = takeBlackjackInsurance(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "declineInsurance": {
+      if (!round || round.phase !== "insurance" || !round.activeHandId) {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      const result = declineBlackjackInsurance(round, shoe);
+      round = result.round;
+      shoe = result.shoe;
+      break;
+    }
+    case "next": {
+      if (!round || round.phase !== "complete") {
+        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+      }
+      shoe = reshuffleBlackjackShoeAtRoundBoundary(shoe, random);
+      round = null;
+      roundId = null;
+      break;
+    }
+    default:
+      throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+  }
+
+  return {
+    revision: current.revision + 1,
+    roundId,
+    round,
+    shoe,
+  };
+}
+
 export class BlackjackServerTableStore {
   private readonly sessions = new Map<string, BlackjackServerTableSession>();
-  private readonly random: BlackjackRandom;
+  private readonly options: BlackjackServerTableOptions;
   private readonly now: () => number;
-  private readonly createRoundId: () => string;
-  private readonly createShoe: () => BlackjackShoe;
 
   constructor(options: BlackjackServerTableOptions = {}) {
-    this.random = options.random ?? secureRandom;
+    this.options = options;
     this.now = options.now ?? Date.now;
-    this.createRoundId = options.createRoundId ?? randomUUID;
-    this.createShoe = options.createShoe ?? (() => createBlackjackShoe(this.random));
   }
 
   private ensureSession(sessionId: string): BlackjackServerTableSession {
     const existing = this.sessions.get(sessionId);
     if (existing) return existing;
 
-    const created: BlackjackServerTableSession = {
-      revision: 0,
-      roundId: null,
-      round: null,
-      shoe: this.createShoe(),
-    };
+    const created = createBlackjackServerSession(this.options);
     this.sessions.set(sessionId, created);
     return created;
   }
 
-  private snapshot(session: BlackjackServerTableSession): BlackjackServerSnapshot {
-    return {
-      revision: session.revision,
-      roundId: session.roundId,
-      tableMin: BLACKJACK_TABLE_MIN,
-      round: session.round ? publicRound(session.round) : null,
-      allowedActions: allowedActionsFor(session.round),
-      shoe: {
-        cardsRemaining: Math.max(0, session.shoe.cards.length - session.shoe.nextIndex),
-        shufflePending: session.shoe.shufflePending,
-      },
-      serverTimeMs: this.now(),
-    };
-  }
-
   getState(sessionId: string): BlackjackServerSnapshot {
-    return this.snapshot(this.ensureSession(sessionId));
+    return snapshotBlackjackServerSession(this.ensureSession(sessionId), 0, this.now);
   }
 
   applyAction(
@@ -201,109 +330,9 @@ export class BlackjackServerTableStore {
     request: BlackjackServerActionRequest,
   ): BlackjackServerSnapshot {
     const current = this.ensureSession(sessionId);
-
-    if (!Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 0) {
-      throw new Error("BLACKJACK_REVISION_REQUIRED");
-    }
-    if (request.expectedRevision !== current.revision) {
-      throw new Error("BLACKJACK_STALE_REVISION");
-    }
-
-    let round = current.round;
-    let shoe = current.shoe;
-    let roundId = current.roundId;
-
-    switch (request.action) {
-      case "deal": {
-        if (round !== null) {
-          throw new Error("BLACKJACK_ROUND_ALREADY_ACTIVE");
-        }
-        const seats = normalizeDealSeats(request.seats);
-        const started = startBlackjackRound(
-          seatStateForDeal(seats),
-          shoe,
-          BLACKJACK_TABLE_MIN,
-        );
-        round = started.round;
-        shoe = started.shoe;
-        roundId = this.createRoundId();
-        break;
-      }
-      case "hit": {
-        if (!round || round.phase !== "playerTurns") {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = hitBlackjackHand(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "stand": {
-        if (!round || round.phase !== "playerTurns") {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = standBlackjackHand(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "double": {
-        if (!round || !canDoubleBlackjackHand(round)) {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = doubleBlackjackHand(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "split": {
-        if (!round || !canSplitBlackjackHand(round)) {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = splitBlackjackHand(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "insurance": {
-        if (!round || !canTakeBlackjackInsurance(round)) {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = takeBlackjackInsurance(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "declineInsurance": {
-        if (!round || round.phase !== "insurance" || !round.activeHandId) {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        const result = declineBlackjackInsurance(round, shoe);
-        round = result.round;
-        shoe = result.shoe;
-        break;
-      }
-      case "next": {
-        if (!round || round.phase !== "complete") {
-          throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-        }
-        shoe = reshuffleBlackjackShoeAtRoundBoundary(shoe, this.random);
-        round = null;
-        roundId = null;
-        break;
-      }
-      default:
-        throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
-    }
-
-    const next: BlackjackServerTableSession = {
-      revision: current.revision + 1,
-      roundId,
-      round,
-      shoe,
-    };
+    const next = transitionBlackjackServerSession(current, request, this.options);
     this.sessions.set(sessionId, next);
-    return this.snapshot(next);
+    return snapshotBlackjackServerSession(next, 0, this.now);
   }
 
   clearForTests(): void {
