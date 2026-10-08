@@ -31,10 +31,13 @@ export type BlackjackCardAnimationPlan = {
   totalDurationMs: number;
 };
 
-const FLIGHT_DURATION_MS = 360;
-const REVEAL_DURATION_MS = 300;
-const DEAL_GAP_MS = 105;
-const ACTION_GAP_MS = 120;
+// Deliberately paced like a physical table rather than a UI list animation.
+// Initial deal used to be 105ms apart, which made multi-seat rounds unreadable.
+const FLIGHT_DURATION_MS = 520;
+const REVEAL_DURATION_MS = 440;
+const DEAL_GAP_MS = 240;
+const ACTION_GAP_MS = 280;
+const DEALER_TURN_PAUSE_MS = 650;
 
 function cardIds(round: BlackjackRoundState | null): Set<string> {
   if (!round) return new Set<string>();
@@ -152,8 +155,9 @@ export function buildBlackjackCardAnimationPlan(
   const playerKind: BlackjackCardAnimationKind = action === "split"
     ? "splitDraw"
     : "playerDraw";
+  const playerCards = newPlayerCards(previous, next);
 
-  for (const card of newPlayerCards(previous, next)) {
+  for (const card of playerCards) {
     steps.push({
       cardId: card.id,
       kind: playerKind,
@@ -163,6 +167,15 @@ export function buildBlackjackCardAnimationPlan(
     order += 1;
   }
 
+  // Dealer action should visibly start after the player's decision/card has
+  // finished, not in the same visual beat. 17-20 player totals remain entirely
+  // under player control; this pause is only used once the round state actually
+  // transitions to complete/dealer resolution.
+  const lastPlayerDelay = playerCards.length > 0
+    ? (playerCards.length - 1) * ACTION_GAP_MS + FLIGHT_DURATION_MS
+    : 0;
+  let dealerDelay = lastPlayerDelay + DEALER_TURN_PAUSE_MS;
+
   const revealHole = shouldRevealHoleCard(previous, next);
   const revealedHole = revealHole ? next.dealer.cards[1] ?? null : null;
   if (revealedHole) {
@@ -170,9 +183,10 @@ export function buildBlackjackCardAnimationPlan(
       cardId: revealedHole.id,
       kind: "holeReveal",
       order,
-      delayMs: order * ACTION_GAP_MS,
+      delayMs: dealerDelay,
     });
     order += 1;
+    dealerDelay += REVEAL_DURATION_MS + ACTION_GAP_MS;
   }
 
   for (const card of newDealerCards(previous, next)) {
@@ -181,9 +195,10 @@ export function buildBlackjackCardAnimationPlan(
       cardId: card.id,
       kind: "dealerDraw",
       order,
-      delayMs: order * ACTION_GAP_MS,
+      delayMs: dealerDelay,
     });
     order += 1;
+    dealerDelay += FLIGHT_DURATION_MS + ACTION_GAP_MS;
   }
 
   return {
