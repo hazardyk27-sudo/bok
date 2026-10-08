@@ -572,36 +572,42 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
       return;
     }
 
-    const authority = getRouletteBetAuthoritySnapshot();
-    const currentBets = authority.bets;
-    if (
-      !authority.roundId ||
-      !currentBets ||
-      (getRouletteBetTotals(currentBets)[completed.betId] ?? 0) <= 0
-    ) {
-      completed.ghost.remove();
-      completed.chip.classList.remove("is-chip-drag-source");
-      forceRuntimeRefresh();
-      return;
-    }
-
-    let nextBets: RouletteBetPlacement[];
-    try {
-      nextBets = createRouletteMovedBets(
-        currentBets,
-        completed.betId,
-        targetBetId,
-      );
-    } catch (error) {
-      console.error("[roulette] chip drag rejected", error);
-      completed.ghost.remove();
-      completed.chip.classList.remove("is-chip-drag-source");
-      forceRuntimeRefresh();
-      return;
-    }
-
     snapGhostToCell(completed, targetCell);
     window.setTimeout(() => {
+      // The snap animation is deliberately visual only. Re-read authority at
+      // commit time so a place/x2/undo that happened during these 45 ms cannot
+      // be overwritten by a stale drop snapshot.
+      const latestAuthority =
+        getRouletteBetAuthoritySnapshot();
+      const latestBets = latestAuthority.bets;
+
+      if (
+        !latestAuthority.roundId ||
+        !latestBets ||
+        !bettingOpen(page, panel) ||
+        (getRouletteBetTotals(latestBets)[completed.betId] ?? 0) <= 0
+      ) {
+        completed.ghost.remove();
+        completed.chip.classList.remove("is-chip-drag-source");
+        forceRuntimeRefresh();
+        return;
+      }
+
+      let nextBets: RouletteBetPlacement[];
+      try {
+        nextBets = createRouletteMovedBets(
+          latestBets,
+          completed.betId,
+          targetBetId,
+        );
+      } catch (error) {
+        console.error("[roulette] chip drag rejected", error);
+        completed.ghost.remove();
+        completed.chip.classList.remove("is-chip-drag-source");
+        forceRuntimeRefresh();
+        return;
+      }
+
       completed.ghost.remove();
       completed.chip.classList.remove("is-chip-drag-source");
       renderOptimisticBets(app, nextBets);
@@ -614,9 +620,9 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
 
       void commitRouletteSequentialChipMove(
         wallet,
-        authority.roundId!,
-        authority.revision,
-        currentBets,
+        latestAuthority.roundId,
+        latestAuthority.revision,
+        latestBets,
         completed.betId,
         targetBetId,
       )
