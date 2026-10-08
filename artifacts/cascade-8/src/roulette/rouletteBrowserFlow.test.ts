@@ -406,16 +406,16 @@ describe("roulette real browser wager lifecycle", () => {
       await page.waitForTimeout(100);
       expect(await balance.textContent()).toBe("$860");
 
-      normalResponseDelayMs = 350;
+      normalResponseDelayMs = 1_000;
       await dragChip(page, "straight-20", "straight-19");
       await eventually(async () =>
         (await page.locator('[data-bet-id="straight-20"] .roulette-placed-chip').count()) === 0,
       );
       expect(await chipState(page, "straight-19")).toMatchObject({ amount: 10 });
 
-      // Do not wait for the drag HTTP response. This is the reported race:
-      // increase 19 while the previous 20 -> 19 write is still travelling.
-      await page.waitForTimeout(330);
+      // The previous 20 -> 19 write is deliberately still in flight. A real
+      // follow-up bet 80ms after drop must still reserve the wallet immediately.
+      await page.waitForTimeout(80);
       await page.locator('[data-bet-id="straight-19"]').click();
       expect(await balance.textContent()).toBe("$850");
 
