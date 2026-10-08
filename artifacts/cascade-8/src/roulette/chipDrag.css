@@ -23,27 +23,30 @@
   pointer-events: none !important;
   opacity: 1;
   cursor: grabbing;
-  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.45));
   will-change: left, top, transform;
 }
 
 /*
- * The drag clone is mounted under document.body rather than inside
- * .roulette-page. Re-apply the exact casino-chip face here so legacy global
- * .roulette-placed-chip rules cannot recolor a white chip blue while it is
- * being carried across the table.
+ * The drag clone lives under document.body, so re-apply the SAME fixed face.
+ * Only --casino-chip-base is tier-dependent; all geometry and shadow stay
+ * identical to the placed chip.
  */
 .roulette-chip-drag-ghost.roulette-casino-chip {
   border: 0 !important;
-  background-color: var(--casino-chip-main) !important;
+  background-color: var(--casino-chip-base) !important;
   background-image: var(--casino-chip-face) !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-size: 100% 100% !important;
-  color: var(--casino-chip-ink) !important;
+  color: var(--casino-chip-ink-fixed) !important;
   mix-blend-mode: normal !important;
   opacity: 1 !important;
-  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.45)) !important;
+  filter: none !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.42) inset,
+    0 -2px 0 rgba(0, 0, 0, 0.22) inset,
+    0 2px 0 rgba(0, 0, 0, 0.30),
+    0 4px 8px rgba(0, 0, 0, 0.34) !important;
 }
 
 .roulette-chip-drag-ghost.roulette-casino-chip::before,
