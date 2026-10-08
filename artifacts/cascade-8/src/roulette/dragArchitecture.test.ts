@@ -38,4 +38,14 @@ describe("roulette drag architecture", () => {
       ).toBe(false);
     });
   });
+
+  it("keeps browser lifecycle events out of drag synchronization", () => {
+    const v6Source = readFileSync(
+      new URL("./chipDragV6.ts", import.meta.url),
+      "utf8",
+    );
+    expect(v6Source).not.toContain(
+      'new Event("visibilitychange")',
+    );
+  });
 });
