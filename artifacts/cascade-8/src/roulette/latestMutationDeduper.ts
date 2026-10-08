@@ -46,6 +46,31 @@ function sameBetTotals(
   return true;
 }
 
+export function releaseRouletteFailedExternalLatestMutation(
+  roundId: string,
+  bets: readonly RouletteBetPlacement[],
+) {
+  const authority =
+    getRouletteBetAuthoritySnapshot();
+
+  if (
+    authority.roundId !== roundId ||
+    !authority.optimistic ||
+    !authority.bets ||
+    !sameBetTotals(authority.bets, bets)
+  ) {
+    return false;
+  }
+
+  setRouletteBetAuthority(
+    roundId,
+    authority.bets,
+    authority.revision,
+    false,
+  );
+  return true;
+}
+
 export function registerRouletteExternalLatestMutation(
   roundId: string,
   bets: readonly RouletteBetPlacement[],
@@ -58,6 +83,17 @@ export function registerRouletteExternalLatestMutation(
   };
 
   pendingLatestMutation = record;
+
+  // If the server-stamped request fails after the runtime has claimed this plan
+  // optimistic, release only that still-current plan. The runtime's own error
+  // path can then force-hydrate authoritative server state instead of having the
+  // bootstrap wrapper reject it forever as a pending local mutation.
+  void promise.catch(() => {
+    releaseRouletteFailedExternalLatestMutation(
+      roundId,
+      record.bets,
+    );
+  });
 
   void promise.finally(() => {
     if (pendingLatestMutation === record) {
