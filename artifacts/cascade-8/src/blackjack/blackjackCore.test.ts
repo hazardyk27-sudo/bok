@@ -33,7 +33,7 @@ describe("blackjack card and hand core", () => {
     expect(BLACKJACK_DECK_COUNT).toBe(6);
     expect(BLACKJACK_SHOE_CARD_COUNT).toBe(312);
     expect(cards).toHaveLength(312);
-    expect(new Set(cards.map((candidate) => candidate.id))).toHaveLength(312);
+    expect(new Set(cards.map((candidate) => candidate.id)).size).toBe(312);
 
     const aces = cards.filter((candidate) => candidate.rank === "A");
     const kings = cards.filter((candidate) => candidate.rank === "K");
