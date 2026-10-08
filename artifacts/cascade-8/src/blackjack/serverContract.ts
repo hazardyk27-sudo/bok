@@ -51,7 +51,11 @@ export type BlackjackPublicHand = {
 };
 
 export type BlackjackPublicDealer = {
-  cards: [BlackjackCard, BlackjackCard | null];
+  /**
+   * While the round is active this is [upcard, null]. Once complete it contains
+   * the full dealer hand, including the revealed hole card and every H17 draw.
+   */
+  cards: Array<BlackjackCard | null>;
   blackjack: boolean | null;
 };
 
