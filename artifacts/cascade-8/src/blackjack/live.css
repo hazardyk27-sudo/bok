@@ -19,12 +19,16 @@
   cursor: default;
 }
 
-/* Real photographic dealer. The table shell sits above this zone (z-index 10),
-   so the lower torso is naturally occluded by the rail/felt and reads as a
-   seated croupier instead of a floating portrait. Soft masking blends the
-   generated casino background into the existing table backdrop. */
+/* Real photographic dealer. Keep it on its own visual layer so the table rail
+   can occlude the torso naturally. The very tight elliptical feather removes
+   the old rectangular-photo look and lets the casino pixels dissolve into the
+   existing dark backdrop. */
 .bj-root[data-live-authority="server"] .bj-dealer-figure {
   display: none;
+}
+
+.bj-root[data-live-authority="server"] .bj-dealer-zone {
+  overflow: visible;
 }
 
 .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
@@ -32,29 +36,31 @@
   position: absolute;
   z-index: 1;
   left: 50%;
-  bottom: -3%;
-  width: clamp(330px, 30vw, 440px);
-  height: clamp(270px, 36vh, 390px);
+  top: 0;
+  width: clamp(390px, 31vw, 470px);
+  height: clamp(255px, 34vh, 330px);
   transform: translateX(-50%);
   pointer-events: none;
   background-image: url("./assets/dealer-game.webp");
   background-repeat: no-repeat;
-  background-position: 50% 16%;
-  background-size: cover;
-  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.48)) saturate(0.94) contrast(1.02);
+  background-position: 50% 2%;
+  background-size: 100% auto;
+  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.52)) saturate(0.9) contrast(1.04) brightness(0.96);
   -webkit-mask-image: radial-gradient(
-    ellipse 72% 98% at 50% 44%,
-    #000 0 58%,
-    rgba(0, 0, 0, 0.98) 69%,
-    rgba(0, 0, 0, 0.64) 82%,
-    transparent 100%
+    ellipse 50% 84% at 50% 46%,
+    #000 0 46%,
+    rgba(0, 0, 0, 0.94) 55%,
+    rgba(0, 0, 0, 0.56) 64%,
+    rgba(0, 0, 0, 0.18) 71%,
+    transparent 78%
   );
   mask-image: radial-gradient(
-    ellipse 72% 98% at 50% 44%,
-    #000 0 58%,
-    rgba(0, 0, 0, 0.98) 69%,
-    rgba(0, 0, 0, 0.64) 82%,
-    transparent 100%
+    ellipse 50% 84% at 50% 46%,
+    #000 0 46%,
+    rgba(0, 0, 0, 0.94) 55%,
+    rgba(0, 0, 0, 0.56) 64%,
+    rgba(0, 0, 0, 0.18) 71%,
+    transparent 78%
   );
 }
 
@@ -78,25 +84,27 @@
   }
 
   .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
-    bottom: -1%;
-    width: clamp(205px, 60vw, 270px);
-    height: clamp(190px, 27vh, 250px);
-    background-position: 50% 14%;
-    background-size: cover;
-    filter: drop-shadow(0 13px 18px rgba(0, 0, 0, 0.46)) saturate(0.94) contrast(1.02);
+    top: 1.5%;
+    width: clamp(235px, 63vw, 290px);
+    height: clamp(178px, 25vh, 230px);
+    background-position: 50% 1%;
+    background-size: 100% auto;
+    filter: drop-shadow(0 13px 19px rgba(0, 0, 0, 0.5)) saturate(0.9) contrast(1.04) brightness(0.96);
     -webkit-mask-image: radial-gradient(
-      ellipse 76% 100% at 50% 43%,
-      #000 0 60%,
-      rgba(0, 0, 0, 0.96) 73%,
-      rgba(0, 0, 0, 0.58) 86%,
-      transparent 100%
+      ellipse 52% 85% at 50% 45%,
+      #000 0 47%,
+      rgba(0, 0, 0, 0.92) 57%,
+      rgba(0, 0, 0, 0.5) 66%,
+      rgba(0, 0, 0, 0.16) 73%,
+      transparent 80%
     );
     mask-image: radial-gradient(
-      ellipse 76% 100% at 50% 43%,
-      #000 0 60%,
-      rgba(0, 0, 0, 0.96) 73%,
-      rgba(0, 0, 0, 0.58) 86%,
-      transparent 100%
+      ellipse 52% 85% at 50% 45%,
+      #000 0 47%,
+      rgba(0, 0, 0, 0.92) 57%,
+      rgba(0, 0, 0, 0.5) 66%,
+      rgba(0, 0, 0, 0.16) 73%,
+      transparent 80%
     );
   }
 
