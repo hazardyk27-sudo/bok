@@ -15,12 +15,32 @@ export type BlackjackWalletMutationPlan = {
   netDeltaCents: number;
 };
 
+// Worst-case supported round shape is five seats, four hands per seat after
+// resplits, and DAS on every hand. A normal win then returns 4x each original
+// hand wager: 5 * 4 * 4 = 80x one seat's starting wager across the round.
+// This is a numeric-safety ceiling only; it is not a configured casino TABLE MAX.
+const BLACKJACK_WORST_CASE_RETURN_MULTIPLIER = 80;
+export const BLACKJACK_MAX_NUMERIC_SAFE_WAGER = Math.floor(
+  Number.MAX_SAFE_INTEGER /
+  (100 * BLACKJACK_WORST_CASE_RETURN_MULTIPLIER),
+);
+
 export function blackjackMoneyToCents(amount: number): number {
   const cents = amount * 100;
   if (!Number.isFinite(amount) || amount < 0 || !Number.isSafeInteger(cents)) {
     throw new Error("BLACKJACK_AMOUNT_OUT_OF_RANGE");
   }
   return cents;
+}
+
+function assertBlackjackWagerNumericSafety(wager: number): void {
+  if (
+    !Number.isSafeInteger(wager) ||
+    wager < 0 ||
+    wager > BLACKJACK_MAX_NUMERIC_SAFE_WAGER
+  ) {
+    throw new Error("BLACKJACK_AMOUNT_OUT_OF_RANGE");
+  }
 }
 
 function activeHand(session: BlackjackServerTableSession): BlackjackRoundHand {
@@ -42,10 +62,11 @@ function debitForAction(
   switch (request.action) {
     case "deal": {
       const seats = request.seats ?? [];
-      const debitCents = seats.reduce(
-        (total, seat) => total + blackjackMoneyToCents(Number(seat.wager)),
-        0,
-      );
+      const debitCents = seats.reduce((total, seat) => {
+        const wager = Number(seat.wager);
+        assertBlackjackWagerNumericSafety(wager);
+        return total + blackjackMoneyToCents(wager);
+      }, 0);
       if (!Number.isSafeInteger(debitCents)) {
         throw new Error("BLACKJACK_AMOUNT_OUT_OF_RANGE");
       }
@@ -53,6 +74,7 @@ function debitForAction(
     }
     case "insurance": {
       const hand = activeHand(current);
+      assertBlackjackWagerNumericSafety(hand.wager);
       return {
         debitCents: blackjackMoneyToCents(hand.wager / 2),
         debitKind: "INSURANCE_DEBIT",
@@ -60,6 +82,7 @@ function debitForAction(
     }
     case "double": {
       const hand = activeHand(current);
+      assertBlackjackWagerNumericSafety(hand.wager);
       return {
         debitCents: blackjackMoneyToCents(hand.wager),
         debitKind: "DOUBLE_DEBIT",
@@ -67,6 +90,7 @@ function debitForAction(
     }
     case "split": {
       const hand = activeHand(current);
+      assertBlackjackWagerNumericSafety(hand.wager);
       return {
         debitCents: blackjackMoneyToCents(hand.wager),
         debitKind: "SPLIT_DEBIT",
