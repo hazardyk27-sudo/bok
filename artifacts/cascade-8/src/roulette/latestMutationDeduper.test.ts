@@ -7,9 +7,11 @@ import {
 import {
   clearRouletteExternalLatestMutationForTests,
   consumeMatchingRouletteExternalLatestMutation,
+  discardRoulettePendingExternalLatestMutationIfSuperseded,
   hasRouletteActiveExternalLatestMutation,
   registerRouletteExternalLatestMutation,
   releaseRouletteFailedExternalLatestMutation,
+  selectRouletteRuntimeMutationBets,
 } from "./latestMutationDeduper";
 import {
   clearRouletteBetAuthority,
@@ -93,6 +95,43 @@ describe("roulette latest mutation deduper", () => {
     ).toBeNull();
   });
 
+  it("keeps a completed fast request dedupable until the delayed runtime job consumes it", async () => {
+    const shared = Promise.resolve(
+      response(20),
+    );
+
+    registerRouletteExternalLatestMutation(
+      "round-1",
+      [{
+        betId: "straight-25",
+        amount: 20,
+      }],
+      shared,
+    );
+
+    await shared;
+    await Promise.resolve();
+
+    expect(
+      hasRouletteActiveExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBe(false);
+    expect(
+      consumeMatchingRouletteExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBe(shared);
+  });
+
   it("tracks a consumed fast request as active until the network promise settles", async () => {
     let resolveShared!: (
       value: RouletteGlobalBetUpdateResponse,
@@ -144,6 +183,92 @@ describe("roulette latest mutation deduper", () => {
         [{ betId: "straight-25", amount: 20 }],
       ),
     ).toBe(false);
+  });
+
+  it("rebases delayed runtime queue snapshots onto commit-time authority but leaves drag writes explicit", () => {
+    setRouletteBetAuthority(
+      "round-1",
+      [{
+        betId: "straight-26",
+        amount: 40,
+      }],
+      7,
+      true,
+    );
+
+    expect(
+      selectRouletteRuntimeMutationBets(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+        "roulette_gbet_12_runtime",
+      ),
+    ).toEqual([
+      {
+        betId: "straight-26",
+        amount: 40,
+      },
+    ]);
+
+    expect(
+      selectRouletteRuntimeMutationBets(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+        "roulette_move_v6_drag",
+      ),
+    ).toEqual([
+      {
+        betId: "straight-25",
+        amount: 20,
+      },
+    ]);
+  });
+
+  it("drops a stale fast dedupe slot when the canonical runtime topology supersedes it", async () => {
+    let resolveShared!: (
+      value: RouletteGlobalBetUpdateResponse,
+    ) => void;
+    const shared = new Promise<RouletteGlobalBetUpdateResponse>(
+      (resolve) => {
+        resolveShared = resolve;
+      },
+    );
+
+    registerRouletteExternalLatestMutation(
+      "round-1",
+      [{
+        betId: "straight-25",
+        amount: 20,
+      }],
+      shared,
+    );
+
+    expect(
+      discardRoulettePendingExternalLatestMutationIfSuperseded(
+        "round-1",
+        [{
+          betId: "straight-26",
+          amount: 20,
+        }],
+      ),
+    ).toBe(true);
+    expect(
+      consumeMatchingRouletteExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBeNull();
+
+    resolveShared(response(20));
+    await shared;
   });
 
   it("does not consume a latest request for a different round or wager topology", () => {
