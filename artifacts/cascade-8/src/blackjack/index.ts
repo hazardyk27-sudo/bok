@@ -1,4 +1,5 @@
 import "./blackjack.css";
+import "./mobile.css";
 
 type DemoSeat = {
   id: number;
@@ -94,9 +95,28 @@ function chipButton(value: string, variant: string, selected = false) {
   `;
 }
 
+function renderMobileSeatTabs() {
+  return `
+    <nav class="bj-mobile-seat-tabs" aria-label="Blackjack seats">
+      ${DEMO_SEATS.map((seat) => `
+        <button
+          class="bj-mobile-seat-tab${seat.id === 3 ? " is-selected" : ""}${seat.state === "active" ? " is-occupied" : ""}"
+          type="button"
+          data-mobile-seat="${seat.id}"
+          aria-label="Seat ${seat.id}${seat.state === "active" ? ", occupied" : ", empty"}"
+          aria-pressed="${seat.id === 3}"
+        >
+          <strong>${seat.id}</strong>
+          <small>${seat.state === "active" ? "READY" : "SIT"}</small>
+        </button>
+      `).join("")}
+    </nav>
+  `;
+}
+
 export function mountBlackjack(app: HTMLDivElement) {
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="1">
+    <main class="bj-root" data-blackjack-part="2">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -184,6 +204,8 @@ export function mountBlackjack(app: HTMLDivElement) {
             </div>
           </div>
         </div>
+
+        ${renderMobileSeatTabs()}
 
         <section class="bj-console" aria-label="Blackjack controls">
           <div class="bj-console__chips" aria-label="Select chip">
