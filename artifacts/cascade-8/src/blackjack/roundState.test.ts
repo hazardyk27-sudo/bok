@@ -5,6 +5,8 @@ import {
   type BlackjackSuit,
 } from "./blackjackCore";
 import {
+  canDoubleBlackjackHand,
+  doubleBlackjackHand,
   getBlackjackRoundReadiness,
   hitBlackjackHand,
   standBlackjackHand,
@@ -121,12 +123,14 @@ describe("blackjack initial deal", () => {
       seatId: 1,
       wager: 50,
       status: "blackjack",
+      doubled: false,
       result: null,
     });
     expect(result.round.hands[1]).toMatchObject({
       seatId: 3,
       wager: 100,
       status: "playing",
+      doubled: false,
     });
     expect(result.round.activeSeatId).toBe(3);
     expect(result.round.phase).toBe("playerTurns");
@@ -311,5 +315,97 @@ describe("blackjack player actions and dealer resolution", () => {
       returnAmount: 50,
       netAmount: 0,
     });
+  });
+});
+
+describe("blackjack double down", () => {
+  it("is available only while the active hand still has its original two cards", () => {
+    const cards = [
+      card("5", 0),
+      card("10", 1),
+      card("6", 2),
+      card("7", 3),
+      card("4", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+
+    expect(canDoubleBlackjackHand(started.round)).toBe(true);
+
+    const hit = hitBlackjackHand(started.round, started.shoe);
+    expect(hit.round.activeSeatId).toBe(1);
+    expect(hit.round.hands[0]?.cards).toHaveLength(3);
+    expect(canDoubleBlackjackHand(hit.round)).toBe(false);
+  });
+
+  it("doubles the wager, draws exactly one card, auto-stands and settles using the doubled stake", () => {
+    const cards = [
+      card("5", 0),
+      card("10", 1),
+      card("6", 2),
+      card("7", 3),
+      card("10", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const doubled = doubleBlackjackHand(started.round, started.shoe);
+
+    expect(doubled.shoe.nextIndex).toBe(5);
+    expect(doubled.round.phase).toBe("complete");
+    expect(doubled.round.hands[0]).toMatchObject({
+      wager: 100,
+      doubled: true,
+      status: "stood",
+      result: "win",
+      returnAmount: 200,
+      netAmount: 100,
+    });
+    expect(doubled.round.hands[0]?.cards).toHaveLength(3);
+  });
+
+  it("a doubled bust loses the full doubled wager", () => {
+    const cards = [
+      card("10", 0),
+      card("10", 1),
+      card("6", 2),
+      card("7", 3),
+      card("10", 4),
+    ];
+    const started = startBlackjackRound(onlySeatOne(), shoeWith(cards), 10);
+    const doubled = doubleBlackjackHand(started.round, started.shoe);
+
+    expect(doubled.round.hands[0]).toMatchObject({
+      wager: 100,
+      doubled: true,
+      status: "bust",
+      result: "lose",
+      returnAmount: 0,
+      netAmount: -100,
+    });
+  });
+
+  it("advances to the next seat immediately after a double", () => {
+    const state = createInitialSeatState();
+    const cards = [
+      card("5", 0),
+      card("8", 1),
+      card("7", 2),
+      card("10", 3),
+      card("6", 4),
+      card("8", 5),
+      card("7", 6),
+      card("7", 7),
+      card("10", 8),
+    ];
+    const started = startBlackjackRound(state, shoeWith(cards), 10);
+    const doubled = doubleBlackjackHand(started.round, started.shoe);
+
+    expect(doubled.round.hands[0]).toMatchObject({
+      seatId: 1,
+      wager: 100,
+      doubled: true,
+      status: "stood",
+      result: null,
+    });
+    expect(doubled.round.activeSeatId).toBe(3);
+    expect(doubled.round.phase).toBe("playerTurns");
   });
 });
