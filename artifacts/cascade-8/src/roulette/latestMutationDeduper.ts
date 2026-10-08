@@ -22,6 +22,7 @@ type PendingLatestMutation = {
 
 let installed = false;
 let pendingLatestMutation: PendingLatestMutation | null = null;
+const activeLatestMutations = new Set<PendingLatestMutation>();
 
 function cloneBets(
   bets: readonly RouletteBetPlacement[],
@@ -47,6 +48,22 @@ function sameBetTotals(
   }
 
   return true;
+}
+
+export function hasRouletteActiveExternalLatestMutation(
+  roundId: string,
+  bets: readonly RouletteBetPlacement[],
+) {
+  for (const mutation of activeLatestMutations) {
+    if (
+      mutation.roundId === roundId &&
+      sameBetTotals(mutation.bets, bets)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function releaseRouletteFailedExternalLatestMutation(
@@ -86,6 +103,7 @@ export function registerRouletteExternalLatestMutation(
   };
 
   pendingLatestMutation = record;
+  activeLatestMutations.add(record);
 
   // The request already started at capture time, so it keeps the deadline
   // advantage. Registering the same promise as an authority queue barrier means
@@ -103,11 +121,12 @@ export function registerRouletteExternalLatestMutation(
   });
 
   void promise.finally(() => {
+    activeLatestMutations.delete(record);
     if (pendingLatestMutation === record) {
       pendingLatestMutation = null;
     }
   }).catch(() => {
-    // The caller owns the request error. This chain only clears the dedupe slot.
+    // The caller owns the request error. This chain only clears tracking state.
   });
 }
 
@@ -131,6 +150,7 @@ export function consumeMatchingRouletteExternalLatestMutation(
 
 export function clearRouletteExternalLatestMutationForTests() {
   pendingLatestMutation = null;
+  activeLatestMutations.clear();
 }
 
 export function installRouletteLatestMutationDeduper() {
