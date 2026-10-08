@@ -47,22 +47,17 @@ function getSessionId(req: Request, res: Response): string {
   return sessionId;
 }
 
-function sendError(res: Response, error: unknown): void {
-  const message = error instanceof Error
-    ? error.message
-    : "BLACKJACK_REQUEST_FAILED";
-
-  const status =
-    message === "INSUFFICIENT_BLACKJACK_CREDITS"
-      ? 402
-      : message === "BLACKJACK_STALE_REVISION" ||
-          message === "BLACKJACK_ROUND_ALREADY_ACTIVE" ||
-          message === "BLACKJACK_ACTION_NOT_ALLOWED" ||
-          message === "BLACKJACK_IDEMPOTENCY_KEY_REUSED"
-        ? 409
-        : 400;
-
-  res.status(status).json({ error: message });
+function statusForError(message: string): number {
+  if (message === "INSUFFICIENT_BLACKJACK_CREDITS") return 402;
+  if (
+    message === "BLACKJACK_STALE_REVISION" ||
+    message === "BLACKJACK_ROUND_ALREADY_ACTIVE" ||
+    message === "BLACKJACK_ACTION_NOT_ALLOWED" ||
+    message === "BLACKJACK_IDEMPOTENCY_KEY_REUSED"
+  ) {
+    return 409;
+  }
+  return 400;
 }
 
 function parseActionRequest(body: unknown): BlackjackServerActionRequest {
@@ -84,8 +79,12 @@ function parseActionRequest(body: unknown): BlackjackServerActionRequest {
     throw new Error("BLACKJACK_ACTION_INPUT_REQUIRED");
   }
 
-  if (input.action === "deal" && !Array.isArray(input.seats)) {
-    throw new Error("BLACKJACK_DEAL_SEATS_REQUIRED");
+  if (input.action === "deal") {
+    if (!Array.isArray(input.seats)) {
+      throw new Error("BLACKJACK_DEAL_SEATS_REQUIRED");
+    }
+  } else if (input.seats !== undefined) {
+    throw new Error("BLACKJACK_ACTION_SEATS_NOT_ALLOWED");
   }
 
   return {
@@ -99,24 +98,42 @@ function parseActionRequest(body: unknown): BlackjackServerActionRequest {
 }
 
 router.get("/blackjack/state", async (req, res) => {
+  const sessionId = getSessionId(req, res);
   try {
-    res.json(await blackjackRepository.getState(getSessionId(req, res)));
+    res.json(await blackjackRepository.getState(sessionId));
   } catch (error) {
-    sendError(res, error);
+    const message = error instanceof Error
+      ? error.message
+      : "BLACKJACK_REQUEST_FAILED";
+    res.status(statusForError(message)).json({ error: message });
   }
 });
 
 router.post("/blackjack/action", async (req, res) => {
+  const sessionId = getSessionId(req, res);
+
   try {
     const request = parseActionRequest(req.body);
-    res.json(
-      await blackjackRepository.applyAction(
-        getSessionId(req, res),
-        request,
-      ),
-    );
+    res.json(await blackjackRepository.applyAction(sessionId, request));
   } catch (error) {
-    sendError(res, error);
+    const message = error instanceof Error
+      ? error.message
+      : "BLACKJACK_REQUEST_FAILED";
+    const status = statusForError(message);
+
+    if (message === "BLACKJACK_STALE_REVISION") {
+      try {
+        res.status(status).json({
+          error: message,
+          snapshot: await blackjackRepository.getState(sessionId),
+        });
+        return;
+      } catch {
+        // Fall through to the original stale error if recovery snapshot lookup fails.
+      }
+    }
+
+    res.status(status).json({ error: message });
   }
 });
 
