@@ -83,7 +83,7 @@ describe("roulette runtime authority synchronization", () => {
     ).toMatchObject({
       roundId: "round-1",
       revision: 7,
-      optimistic: false,
+      optimistic: true,
       bets: state.placements,
     });
   });
@@ -169,13 +169,14 @@ describe("roulette runtime authority synchronization", () => {
       "straight-25": 40,
     });
     expect(
-      getRouletteBetAuthoritySnapshot().bets,
-    ).toEqual([
-      {
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      bets: [{
         betId: "straight-25",
         amount: 40,
-      },
-    ]);
+      }],
+      optimistic: true,
+    });
 
     const cleared =
       clearRouletteBets(staleState);
@@ -187,7 +188,7 @@ describe("roulette runtime authority synchronization", () => {
       roundId: "round-1",
       bets: [],
       revision: 5,
-      optimistic: false,
+      optimistic: true,
     });
   });
 
