@@ -8,6 +8,10 @@ const source = readFileSync(
   fileURLToPath(new URL("./fastDouble.ts", import.meta.url)),
   "utf8",
 );
+const deduperSource = readFileSync(
+  fileURLToPath(new URL("./latestMutationDeduper.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("roulette fast x2", () => {
   it("changes placed-chip color tier as aggregate wager grows", () => {
@@ -39,6 +43,18 @@ describe("roulette fast x2", () => {
     );
     expect(source).toContain(
       "{ capture: true }",
+    );
+  });
+
+  it("does not pre-apply x2 to authority before the runtime reducer", () => {
+    expect(source).not.toContain(
+      "setRouletteBetAuthority(",
+    );
+    expect(deduperSource).toContain(
+      "setRouletteBetAuthority(",
+    );
+    expect(deduperSource).toContain(
+      "consumeMatchingRouletteExternalLatestMutation",
     );
   });
 });
