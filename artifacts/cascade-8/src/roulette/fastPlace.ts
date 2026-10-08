@@ -133,6 +133,56 @@ export function installRouletteFastPlace(
 
   panel.dataset.fastPlaceInstalled = "true";
 
+  let pendingVisibleBalanceCents: number | null = null;
+  let balanceReconcileQueued = false;
+
+  const reconcilePendingBalance = () => {
+    balanceReconcileQueued = false;
+    if (pendingVisibleBalanceCents === null) return;
+
+    const authority =
+      getRouletteBetAuthoritySnapshot();
+
+    // Once the authoritative write/recovery has completed, server balance owns
+    // the display again. Until then, a background state poll is not allowed to
+    // overwrite the stake the player already committed locally.
+    if (!authority.optimistic) {
+      pendingVisibleBalanceCents = null;
+      return;
+    }
+
+    if (
+      readDisplayedBalanceCents(app) !==
+      pendingVisibleBalanceCents
+    ) {
+      renderBalance(
+        app,
+        pendingVisibleBalanceCents,
+      );
+    }
+  };
+
+  const queueBalanceReconcile = () => {
+    if (balanceReconcileQueued) return;
+    balanceReconcileQueued = true;
+    queueMicrotask(reconcilePendingBalance);
+  };
+
+  const balanceObserver =
+    new MutationObserver(queueBalanceReconcile);
+
+  app
+    .querySelectorAll<HTMLElement>(
+      "[data-wallet-balance]",
+    )
+    .forEach((display) => {
+      balanceObserver.observe(display, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    });
+
   panel.addEventListener(
     "click",
     (event) => {
@@ -171,15 +221,22 @@ export function installRouletteFastPlace(
         return;
       }
 
+      // Wallet acknowledgement belongs to the click itself, not to network RTT.
+      // Reserve the visible amount in this task even when drag/undo/etc. forces
+      // the actual write onto the serialized path.
+      pendingVisibleBalanceCents =
+        displayedBalanceCents - amount * 100;
+      renderBalance(
+        app,
+        pendingVisibleBalanceCents,
+      );
+
       const hasMatchingActiveFastMutation =
         hasRouletteActiveExternalLatestMutation(
           authority.roundId,
           current,
         );
 
-      // Repeated normal placements stay on the immediate path. If an unrelated
-      // optimistic undo/drag/clear/rebet owns topology, fall back to the normal
-      // serialized writer rather than crossing that mutation boundary.
       if (
         !canRouletteUseFastPlace(
           authority.optimistic,
@@ -200,16 +257,6 @@ export function installRouletteFastPlace(
       const idempotencyKey =
         `roulette_fast_place_${crypto.randomUUID().replaceAll("-", "")}`;
 
-      // UX acknowledgement is synchronous: reserve the visible balance before
-      // the browser gets to the next frame. Server confirmation still remains
-      // authoritative and can recover/reject through the shared runtime promise.
-      renderBalance(
-        app,
-        displayedBalanceCents - amount * 100,
-      );
-
-      // Most important deadline invariant: start the HTTP request in capture
-      // phase, before the runtime bubble handler and before any client write queue.
       const request = fetch(
         FAST_PLACE_ENDPOINT,
         {
@@ -236,6 +283,7 @@ export function installRouletteFastPlace(
             );
 
           if (stillCurrent) {
+            pendingVisibleBalanceCents = null;
             renderBalance(
               app,
               response.balanceCents,
@@ -252,11 +300,13 @@ export function installRouletteFastPlace(
 
       void request.catch((error) => {
         // The runtime bubble handler consumes the same promise and performs the
-        // authoritative bootstrap recovery. Do not issue a second write here.
+        // authoritative bootstrap recovery. The balance guard keeps the local
+        // reservation only while authority remains optimistic.
         console.error(
           "[roulette] fast place sync failed",
           error,
         );
+        queueBalanceReconcile();
       });
     },
     { capture: true },
