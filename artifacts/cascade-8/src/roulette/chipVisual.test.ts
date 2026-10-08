@@ -44,12 +44,14 @@ describe("roulette casino chip visuals", () => {
     expect(getRouletteChipTier(50_000)).toBe("purple");
   });
 
-  it("keeps the approved noble purple palette", () => {
-    expect(ROULETTE_CHIP_PALETTES.purple).toMatchObject({
-      main: "#5B2A86",
-      inner: "#3E1C5D",
-      highlight: "#7B43B6",
-      ink: "#FFFFFF",
+  it("allows every tier to vary only the base color", () => {
+    expect(ROULETTE_CHIP_PALETTES).toEqual({
+      white: { base: "#F1F1EE" },
+      blue: { base: "#2F78C8" },
+      green: { base: "#2D9B61" },
+      red: { base: "#C73B36" },
+      black: { base: "#1E1F22" },
+      purple: { base: "#5B2A86" },
     });
     expect(getRouletteChipPalette(5_000)).toBe(
       ROULETTE_CHIP_PALETTES.purple,
@@ -63,7 +65,7 @@ describe("roulette casino chip visuals", () => {
       });
   });
 
-  it("strips the historic blue $10 face before applying aggregate amount color", () => {
+  it("changes only --casino-chip-base when aggregate amount crosses tiers", () => {
     const chip = document.createElement("span");
     const cell = document.createElement("div");
     chip.className = "roulette-placed-chip chip-10";
@@ -71,34 +73,43 @@ describe("roulette casino chip visuals", () => {
     chip.dataset.chipFaceSourceValue = "10";
     chip.dataset.stackDepth = "3";
     chip.style.setProperty("--chip-fill", "#3b8ce0");
-    chip.style.setProperty("--chip-ink", "#ffffff");
+    chip.style.setProperty("--casino-chip-inner", "#123456");
     chip.style.setProperty("background-color", "rgb(47, 120, 200)", "important");
     cell.append(chip);
 
     expect(syncRoulettePlacedChipVisual(chip, 20)).toBe(true);
     expect(chip.classList.contains("chip-10")).toBe(false);
     expect(chip.style.getPropertyValue("--chip-fill")).toBe("");
+    expect(chip.style.getPropertyValue("--casino-chip-inner")).toBe("");
     expect(chip.style.getPropertyValue("background-color")).toBe("");
     expect(chip.dataset.chipFaceSourceValue).toBeUndefined();
     expect(chip.dataset.stackDepth).toBeUndefined();
     expect(chip.dataset.chipTier).toBe("white");
-    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
-      ROULETTE_CHIP_PALETTES.white.main,
+    expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
+      ROULETTE_CHIP_PALETTES.white.base,
     );
 
     expect(syncRoulettePlacedChipVisual(chip, 80)).toBe(true);
     expect(chip.dataset.chipTier).toBe("blue");
-    expect(chip.dataset.stackDepth).toBeUndefined();
-    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
-      ROULETTE_CHIP_PALETTES.blue.main,
+    expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
+      ROULETTE_CHIP_PALETTES.blue.base,
     );
 
     expect(syncRoulettePlacedChipVisual(chip, 160)).toBe(true);
     expect(chip.dataset.chipTier).toBe("green");
-    expect(chip.dataset.stackDepth).toBeUndefined();
-    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
-      ROULETTE_CHIP_PALETTES.green.main,
+    expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
+      ROULETTE_CHIP_PALETTES.green.base,
     );
+
+    for (const forbidden of [
+      "--casino-chip-main",
+      "--casino-chip-inner",
+      "--casino-chip-ink",
+      "--casino-chip-accent",
+      "--casino-chip-highlight",
+    ]) {
+      expect(chip.style.getPropertyValue(forbidden)).toBe("");
+    }
   });
 
   it("keeps twelve doubled ten-dollar cells white at a $240 board total", () => {
@@ -107,7 +118,6 @@ describe("roulette casino chip visuals", () => {
       const chip = document.createElement("span");
       chip.className = "roulette-placed-chip chip-10";
       chip.dataset.betAmount = "20";
-      chip.style.setProperty("--chip-fill", "#3b8ce0");
       cell.append(chip);
       syncRoulettePlacedChipVisual(chip, 20);
       return chip;
@@ -119,8 +129,8 @@ describe("roulette casino chip visuals", () => {
       expect(chip.dataset.chipTier).toBe("white");
       expect(chip.dataset.stackDepth).toBeUndefined();
       expect(chip.classList.contains("chip-10")).toBe(false);
-      expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
-        ROULETTE_CHIP_PALETTES.white.main,
+      expect(chip.style.getPropertyValue("--casino-chip-base")).toBe(
+        ROULETTE_CHIP_PALETTES.white.base,
       );
     });
   });
