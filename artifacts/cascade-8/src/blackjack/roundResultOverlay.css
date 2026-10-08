@@ -1,0 +1,98 @@
+.bj-round-result-summary {
+  position: absolute;
+  z-index: 28;
+  left: 50%;
+  top: 54%;
+  width: min(430px, 44%);
+  transform: translate(-50%, -50%);
+  padding: 18px 24px 16px;
+  border: 1px solid rgba(230, 189, 106, 0.52);
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(3, 24, 16, 0.94), rgba(2, 13, 9, 0.9));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34), inset 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(7px);
+  pointer-events: none;
+}
+
+.bj-round-result-summary__label {
+  display: block;
+  color: rgba(244, 234, 208, 0.72);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.bj-round-result-summary__amount {
+  display: block;
+  margin-top: 4px;
+  color: #f3c86e;
+  font-size: clamp(30px, 3.1vw, 52px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-shadow: 0 5px 22px rgba(0, 0, 0, 0.35);
+}
+
+.bj-round-result-summary.is-win .bj-round-result-summary__amount {
+  color: #35ef96;
+}
+
+.bj-round-result-summary.is-loss .bj-round-result-summary__amount {
+  color: #ff8585;
+}
+
+.bj-round-result-summary__meta,
+.bj-round-result-summary__money {
+  display: block;
+  margin-top: 7px;
+  color: rgba(244, 234, 208, 0.7);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bj-round-result-summary__money {
+  margin-top: 4px;
+  color: rgba(244, 234, 208, 0.9);
+  letter-spacing: 0.04em;
+}
+
+.bj-felt.is-round-complete-summary .bj-table-copy {
+  opacity: 0;
+}
+
+.bj-felt.is-round-complete-summary .bj-seat.is-result-win .bj-seat__round-badge small,
+.bj-felt.is-round-complete-summary .bj-seat.is-result-lose .bj-seat__round-badge small,
+.bj-felt.is-round-complete-summary .bj-seat.is-result-push .bj-seat__round-badge small,
+.bj-felt.is-round-complete-summary .bj-seat.is-result-blackjack .bj-seat__round-badge small,
+.bj-felt.is-round-complete-summary .bj-split-hand__status,
+.bj-felt.is-round-complete-summary .bj-hand-insurance {
+  display: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .bj-round-result-summary {
+    top: 49%;
+    width: min(300px, 74%);
+    padding: 12px 14px 11px;
+    border-radius: 14px;
+  }
+
+  .bj-round-result-summary__label {
+    font-size: 7px;
+    letter-spacing: 0.16em;
+  }
+
+  .bj-round-result-summary__amount {
+    margin-top: 3px;
+    font-size: clamp(26px, 9vw, 38px);
+  }
+
+  .bj-round-result-summary__meta,
+  .bj-round-result-summary__money {
+    font-size: 6.5px;
+  }
+}
