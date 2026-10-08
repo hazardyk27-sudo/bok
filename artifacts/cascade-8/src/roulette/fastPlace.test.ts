@@ -74,7 +74,9 @@ describe("roulette fast normal placement", () => {
     );
 
     const never = new Promise<Response>(() => {});
-    const fetchMock = vi.fn(() => never);
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, _init?: RequestInit) => never,
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     installRouletteFastPlace(app);
