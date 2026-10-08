@@ -11,6 +11,14 @@ async function readJson<T>(response: Response): Promise<T> {
   return payload;
 }
 
+export function createBlackjackIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `blackjack-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
+}
+
 export async function fetchBlackjackServerState(): Promise<BlackjackServerSnapshot> {
   const response = await fetch("/api/blackjack/state", {
     method: "GET",
