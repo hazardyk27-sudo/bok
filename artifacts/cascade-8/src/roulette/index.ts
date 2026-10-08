@@ -4,6 +4,7 @@ import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteBetAuthority } from "./betAuthority";
 import { installRouletteFastDouble } from "./fastDouble";
+import { installRouletteLatestMutationDeduper } from "./latestMutationDeduper";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
 import "./verification.css";
@@ -20,6 +21,11 @@ export function mountRoulette(app: HTMLDivElement) {
   // stale polling/retries.
   installRouletteBetAuthority(app);
 
+  // A fast deadline-sensitive mutation may already own the exact plan the
+  // runtime is about to submit. Reuse that promise instead of issuing a second
+  // HTTP write for the same user action.
+  installRouletteLatestMutationDeduper();
+
   // rouletteRuntime owns the table lifecycle, but every placed-chip DOM node is
   // created through createRouletteCanonicalPlacedChip. The runtime must never
   // restore legacy chip-* classes or --chip-* palette variables.
@@ -31,8 +37,9 @@ export function mountRoulette(app: HTMLDivElement) {
   // normalizer for canonical placed-chip nodes; it is not a second color source.
   installRouletteChipVisuals(app);
 
-  // x2 gets a parallel server-stamped latest-state write so a click made while
-  // BET TIME is open is not lost behind an older client-side wager request.
+  // x2 stamps its one network request at click time. The runtime still performs
+  // the normal optimistic reducer/render, but its matching updateGlobalBet call
+  // shares the already-started request through the deduper above.
   installRouletteFastDouble(app);
 
   // Drag is input-only: one optimistic render at drop, then one serialized
