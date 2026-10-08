@@ -19,6 +19,51 @@
   cursor: default;
 }
 
+/* Real photographic dealer. The table shell sits above this zone (z-index 10),
+   so the lower torso is naturally occluded by the rail/felt and reads as a
+   seated croupier instead of a floating portrait. Soft masking blends the
+   generated casino background into the existing table backdrop. */
+.bj-root[data-live-authority="server"] .bj-dealer-figure {
+  display: none;
+}
+
+.bj-root[data-live-authority="server"] .bj-dealer-zone::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: -3%;
+  width: clamp(330px, 30vw, 440px);
+  height: clamp(270px, 36vh, 390px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  background-image: url("./assets/dealer-game.webp");
+  background-repeat: no-repeat;
+  background-position: 50% 16%;
+  background-size: cover;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.48)) saturate(0.94) contrast(1.02);
+  -webkit-mask-image: radial-gradient(
+    ellipse 72% 98% at 50% 44%,
+    #000 0 58%,
+    rgba(0, 0, 0, 0.98) 69%,
+    rgba(0, 0, 0, 0.64) 82%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 72% 98% at 50% 44%,
+    #000 0 58%,
+    rgba(0, 0, 0, 0.98) 69%,
+    rgba(0, 0, 0, 0.64) 82%,
+    transparent 100%
+  );
+}
+
+.bj-root[data-live-authority="server"] .bj-chip-rack,
+.bj-root[data-live-authority="server"] .bj-discard,
+.bj-root[data-live-authority="server"] .bj-shoe {
+  z-index: 3;
+}
+
 @media (max-width: 900px) and (orientation: portrait) {
   .bj-live-authority {
     min-height: 11px;
@@ -30,6 +75,29 @@
 
   .bj-root[data-live-authority="server"] .bj-hud--status small {
     max-width: 28ch;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
+    bottom: -1%;
+    width: clamp(205px, 60vw, 270px);
+    height: clamp(190px, 27vh, 250px);
+    background-position: 50% 14%;
+    background-size: cover;
+    filter: drop-shadow(0 13px 18px rgba(0, 0, 0, 0.46)) saturate(0.94) contrast(1.02);
+    -webkit-mask-image: radial-gradient(
+      ellipse 76% 100% at 50% 43%,
+      #000 0 60%,
+      rgba(0, 0, 0, 0.96) 73%,
+      rgba(0, 0, 0, 0.58) 86%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 76% 100% at 50% 43%,
+      #000 0 60%,
+      rgba(0, 0, 0, 0.96) 73%,
+      rgba(0, 0, 0, 0.58) 86%,
+      transparent 100%
+    );
   }
 
   /* Mobile console is contextual: betting tools before DEAL, round actions after DEAL.
