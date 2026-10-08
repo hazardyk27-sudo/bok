@@ -15,58 +15,23 @@ export {
 } from "./chipTier";
 
 export type RouletteChipPalette = Readonly<{
-  main: string;
-  inner: string;
-  ink: string;
-  accent: string;
-  highlight: string;
+  base: string;
 }>;
 
+/**
+ * Tier may change ONE visual property only: the base color.
+ * Geometry, ring, edge segments, center, highlight, shadow and typography are
+ * fixed by chipVisual.css and must never vary by denomination/tier.
+ */
 export const ROULETTE_CHIP_PALETTES: Readonly<
   Record<RouletteChipTier, RouletteChipPalette>
 > = {
-  white: {
-    main: "#F1F1EE",
-    inner: "#D9D9D4",
-    ink: "#1A1A1A",
-    accent: "#303236",
-    highlight: "#FFFFFF",
-  },
-  blue: {
-    main: "#2F78C8",
-    inner: "#1F5EA3",
-    ink: "#FFFFFF",
-    accent: "#F7FAFF",
-    highlight: "#67A9EB",
-  },
-  green: {
-    main: "#2D9B61",
-    inner: "#1F7448",
-    ink: "#FFFFFF",
-    accent: "#F7FFF9",
-    highlight: "#62C88E",
-  },
-  red: {
-    main: "#C73B36",
-    inner: "#922A27",
-    ink: "#FFFFFF",
-    accent: "#FFF8F7",
-    highlight: "#EA6A64",
-  },
-  black: {
-    main: "#1E1F22",
-    inner: "#0F1012",
-    ink: "#FFFFFF",
-    accent: "#F5F5F2",
-    highlight: "#4A4D52",
-  },
-  purple: {
-    main: "#5B2A86",
-    inner: "#3E1C5D",
-    ink: "#FFFFFF",
-    accent: "#FBF8FF",
-    highlight: "#7B43B6",
-  },
+  white: { base: "#F1F1EE" },
+  blue: { base: "#2F78C8" },
+  green: { base: "#2D9B61" },
+  red: { base: "#C73B36" },
+  black: { base: "#1E1F22" },
+  purple: { base: "#5B2A86" },
 };
 
 export function getRouletteChipPalette(
@@ -102,25 +67,11 @@ export function applyRouletteChipVisualState(
 
   element.classList.add("roulette-casino-chip");
   element.dataset.chipTier = tier;
+
+  // This is intentionally the ONLY tier-dependent visual variable.
   element.style.setProperty(
-    "--casino-chip-main",
-    palette.main,
-  );
-  element.style.setProperty(
-    "--casino-chip-inner",
-    palette.inner,
-  );
-  element.style.setProperty(
-    "--casino-chip-ink",
-    palette.ink,
-  );
-  element.style.setProperty(
-    "--casino-chip-accent",
-    palette.accent,
-  );
-  element.style.setProperty(
-    "--casino-chip-highlight",
-    palette.highlight,
+    "--casino-chip-base",
+    palette.base,
   );
 
   return true;
@@ -130,6 +81,11 @@ const LEGACY_PLACED_FACE_VARIABLES = [
   "--chip-fill",
   "--chip-ink",
   "--chip-edge",
+  "--casino-chip-main",
+  "--casino-chip-inner",
+  "--casino-chip-ink",
+  "--casino-chip-accent",
+  "--casino-chip-highlight",
 ] as const;
 
 const LEGACY_SOURCE_MIRROR_PROPERTIES = [
