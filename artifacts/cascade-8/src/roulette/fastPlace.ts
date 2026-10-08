@@ -133,6 +133,56 @@ export function installRouletteFastPlace(
 
   panel.dataset.fastPlaceInstalled = "true";
 
+  let pendingVisibleBalanceCents: number | null = null;
+  let balanceReconcileQueued = false;
+
+  const reconcilePendingBalance = () => {
+    balanceReconcileQueued = false;
+    if (pendingVisibleBalanceCents === null) return;
+
+    const authority =
+      getRouletteBetAuthoritySnapshot();
+
+    // Once the authoritative write/recovery has completed, server balance owns
+    // the display again. Until then, a background state poll is not allowed to
+    // overwrite the stake the player already committed locally.
+    if (!authority.optimistic) {
+      pendingVisibleBalanceCents = null;
+      return;
+    }
+
+    if (
+      readDisplayedBalanceCents(app) !==
+      pendingVisibleBalanceCents
+    ) {
+      renderBalance(
+        app,
+        pendingVisibleBalanceCents,
+      );
+    }
+  };
+
+  const queueBalanceReconcile = () => {
+    if (balanceReconcileQueued) return;
+    balanceReconcileQueued = true;
+    queueMicrotask(reconcilePendingBalance);
+  };
+
+  const balanceObserver =
+    new MutationObserver(queueBalanceReconcile);
+
+  app
+    .querySelectorAll<HTMLElement>(
+      "[data-wallet-balance]",
+    )
+    .forEach((display) => {
+      balanceObserver.observe(display, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    });
+
   panel.addEventListener(
     "click",
     (event) => {
@@ -171,14 +221,14 @@ export function installRouletteFastPlace(
         return;
       }
 
-      // Visual wallet reservation belongs to the user action, not to the network
-      // path. Deduct before deciding whether this click can use the fast endpoint.
-      // If drag/undo/etc. currently owns optimistic authority, the runtime will
-      // serialize the write, but the player still sees the stake leave the wallet
-      // in this same click task instead of waiting for server ping/queue latency.
+      // Wallet acknowledgement belongs to the click itself, not to network RTT.
+      // Reserve the visible amount in this task even when drag/undo/etc. forces
+      // the actual write onto the serialized path.
+      pendingVisibleBalanceCents =
+        displayedBalanceCents - amount * 100;
       renderBalance(
         app,
-        displayedBalanceCents - amount * 100,
+        pendingVisibleBalanceCents,
       );
 
       const hasMatchingActiveFastMutation =
@@ -187,9 +237,6 @@ export function installRouletteFastPlace(
           current,
         );
 
-      // Repeated normal placements stay on the immediate path. If an unrelated
-      // optimistic undo/drag/clear/rebet owns topology, fall back to the normal
-      // serialized writer rather than crossing that mutation boundary.
       if (
         !canRouletteUseFastPlace(
           authority.optimistic,
@@ -210,8 +257,6 @@ export function installRouletteFastPlace(
       const idempotencyKey =
         `roulette_fast_place_${crypto.randomUUID().replaceAll("-", "")}`;
 
-      // Most important deadline invariant: start the HTTP request in capture
-      // phase, before the runtime bubble handler and before any client write queue.
       const request = fetch(
         FAST_PLACE_ENDPOINT,
         {
@@ -238,6 +283,7 @@ export function installRouletteFastPlace(
             );
 
           if (stillCurrent) {
+            pendingVisibleBalanceCents = null;
             renderBalance(
               app,
               response.balanceCents,
@@ -254,11 +300,13 @@ export function installRouletteFastPlace(
 
       void request.catch((error) => {
         // The runtime bubble handler consumes the same promise and performs the
-        // authoritative bootstrap recovery. Do not issue a second write here.
+        // authoritative bootstrap recovery. The balance guard keeps the local
+        // reservation only while authority remains optimistic.
         console.error(
           "[roulette] fast place sync failed",
           error,
         );
+        queueBalanceReconcile();
       });
     },
     { capture: true },
