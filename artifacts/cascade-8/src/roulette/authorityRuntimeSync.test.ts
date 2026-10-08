@@ -1,22 +1,32 @@
-import { afterEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import {
   selectRouletteRuntimeBootstrapBet,
   shouldAcceptRouletteAuthorityBootstrap,
 } from "./betAuthority";
 import {
-  clearRouletteAuthoritativeDragPlacements,
   clearRouletteBets,
   createRouletteBetState,
   doubleRouletteBets,
   getRouletteBetTotals,
   placeRouletteBet,
-  setRouletteAuthoritativeDragPlacements,
   undoRouletteBet,
 } from "./betState";
-import type { RouletteGlobalBetSnapshot } from "./rouletteWalletClient";
+import {
+  clearRouletteBetAuthority,
+  getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
+} from "./betAuthorityVisual";
+import type {
+  RouletteGlobalBetSnapshot,
+} from "./rouletteWalletClient";
 
 afterEach(() => {
-  clearRouletteAuthoritativeDragPlacements();
+  clearRouletteBetAuthority();
 });
 
 function globalBet(
@@ -38,58 +48,147 @@ function globalBet(
 }
 
 describe("roulette runtime authority synchronization", () => {
-  it("uses the moved authoritative topology for a fresh bet and repeated doubles", () => {
+  it("uses one authority topology for reducers and authority readers", () => {
     let state = createRouletteBetState();
-    state = placeRouletteBet(state, "straight-24");
+    state = placeRouletteBet(
+      state,
+      "straight-24",
+    );
 
-    setRouletteAuthoritativeDragPlacements([
-      { betId: "straight-25", amount: 10 },
-    ]);
+    setRouletteBetAuthority(
+      "round-1",
+      [{
+        betId: "straight-25",
+        amount: 10,
+      }],
+      7,
+      false,
+    );
 
-    state = placeRouletteBet(state, "straight-24");
-    expect(getRouletteBetTotals(state.placements)).toEqual({
+    state = placeRouletteBet(
+      state,
+      "straight-24",
+    );
+
+    expect(
+      getRouletteBetTotals(
+        state.placements,
+      ),
+    ).toEqual({
       "straight-25": 10,
       "straight-24": 10,
     });
-
-    setRouletteAuthoritativeDragPlacements(state.placements);
-    state = doubleRouletteBets(state);
-    expect(getRouletteBetTotals(state.placements)).toEqual({
-      "straight-25": 20,
-      "straight-24": 20,
-    });
-
-    setRouletteAuthoritativeDragPlacements(state.placements);
-    state = doubleRouletteBets(state);
-    expect(getRouletteBetTotals(state.placements)).toEqual({
-      "straight-25": 40,
-      "straight-24": 40,
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      roundId: "round-1",
+      revision: 7,
+      optimistic: false,
+      bets: state.placements,
     });
   });
 
-  it("undoes and clears the authoritative topology instead of stale pre-drag placements", () => {
+  it("doubles the unified authority without losing revision metadata", () => {
     const staleState = {
       ...createRouletteBetState(),
       placements: [
-        { betId: "straight-24", amount: 80 },
+        {
+          betId: "straight-24",
+          amount: 999,
+        },
       ],
     };
 
-    setRouletteAuthoritativeDragPlacements([
-      { betId: "straight-25", amount: 40 },
-      { betId: "straight-24", amount: 40 },
-    ]);
+    setRouletteBetAuthority(
+      "round-1",
+      [{
+        betId: "straight-25",
+        amount: 10,
+      }],
+      8,
+      true,
+    );
 
-    const undone = undoRouletteBet(staleState);
-    expect(getRouletteBetTotals(undone.placements)).toEqual({
+    const doubled =
+      doubleRouletteBets(staleState);
+
+    expect(doubled.placements).toEqual([
+      {
+        betId: "straight-25",
+        amount: 20,
+      },
+    ]);
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toEqual({
+      roundId: "round-1",
+      bets: [{
+        betId: "straight-25",
+        amount: 20,
+      }],
+      revision: 8,
+      optimistic: true,
+    });
+  });
+
+  it("undoes and clears the unified topology instead of stale pre-drag placements", () => {
+    const staleState = {
+      ...createRouletteBetState(),
+      placements: [
+        {
+          betId: "straight-24",
+          amount: 80,
+        },
+      ],
+    };
+
+    setRouletteBetAuthority(
+      "round-1",
+      [
+        {
+          betId: "straight-25",
+          amount: 40,
+        },
+        {
+          betId: "straight-24",
+          amount: 40,
+        },
+      ],
+      5,
+      false,
+    );
+
+    const undone =
+      undoRouletteBet(staleState);
+
+    expect(
+      getRouletteBetTotals(
+        undone.placements,
+      ),
+    ).toEqual({
       "straight-25": 40,
     });
-
-    setRouletteAuthoritativeDragPlacements([
-      { betId: "straight-25", amount: 40 },
+    expect(
+      getRouletteBetAuthoritySnapshot().bets,
+    ).toEqual([
+      {
+        betId: "straight-25",
+        amount: 40,
+      },
     ]);
-    const cleared = clearRouletteBets(staleState);
+
+    const cleared =
+      clearRouletteBets(staleState);
+
     expect(cleared.placements).toEqual([]);
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      roundId: "round-1",
+      bets: [],
+      revision: 5,
+      optimistic: false,
+    });
   });
 
   it("never accepts an older or null same-round bootstrap over confirmed authority", () => {
@@ -100,16 +199,32 @@ describe("roulette runtime authority synchronization", () => {
     };
 
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(confirmed, "round-1", 5),
+      shouldAcceptRouletteAuthorityBootstrap(
+        confirmed,
+        "round-1",
+        5,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(confirmed, "round-1", null),
+      shouldAcceptRouletteAuthorityBootstrap(
+        confirmed,
+        "round-1",
+        null,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(confirmed, "round-1", 8),
+      shouldAcceptRouletteAuthorityBootstrap(
+        confirmed,
+        "round-1",
+        8,
+      ),
     ).toBe(true);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(confirmed, "round-1", 9),
+      shouldAcceptRouletteAuthorityBootstrap(
+        confirmed,
+        "round-1",
+        9,
+      ),
     ).toBe(true);
   });
 
@@ -121,65 +236,114 @@ describe("roulette runtime authority synchronization", () => {
     };
 
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 8),
+      shouldAcceptRouletteAuthorityBootstrap(
+        optimistic,
+        "round-1",
+        8,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 7),
+      shouldAcceptRouletteAuthorityBootstrap(
+        optimistic,
+        "round-1",
+        7,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 9),
+      shouldAcceptRouletteAuthorityBootstrap(
+        optimistic,
+        "round-1",
+        9,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 99),
+      shouldAcceptRouletteAuthorityBootstrap(
+        optimistic,
+        "round-1",
+        99,
+      ),
     ).toBe(false);
     expect(
-      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-2", null),
+      shouldAcceptRouletteAuthorityBootstrap(
+        optimistic,
+        "round-2",
+        null,
+      ),
     ).toBe(true);
   });
 
   it("feeds runtime the accepted authority instead of a delayed stale server snapshot", () => {
     const authority = {
       roundId: "round-1",
-      bets: [{ betId: "straight-25", amount: 200 }],
+      bets: [{
+        betId: "straight-25",
+        amount: 200,
+      }],
       revision: 8,
       optimistic: false,
     };
-    const accepted = globalBet(8, "straight-25", 200);
-    const delayed = globalBet(5, "straight-24", 10);
+    const accepted =
+      globalBet(
+        8,
+        "straight-25",
+        200,
+      );
+    const delayed =
+      globalBet(
+        5,
+        "straight-24",
+        10,
+      );
 
-    const selected = selectRouletteRuntimeBootstrapBet(
-      authority,
-      "round-1",
-      delayed,
-      accepted,
-    );
+    const selected =
+      selectRouletteRuntimeBootstrapBet(
+        authority,
+        "round-1",
+        delayed,
+        accepted,
+      );
 
     expect(selected?.revision).toBe(8);
     expect(selected?.bets).toEqual([
-      { betId: "straight-25", amount: 200 },
+      {
+        betId: "straight-25",
+        amount: 200,
+      },
     ]);
   });
 
   it("feeds runtime the optimistic moved topology while the serialized write is pending", () => {
     const authority = {
       roundId: "round-1",
-      bets: [{ betId: "straight-25", amount: 40 }],
+      bets: [{
+        betId: "straight-25",
+        amount: 40,
+      }],
       revision: 8,
       optimistic: true,
     };
-    const accepted = globalBet(8, "straight-24", 40);
+    const accepted =
+      globalBet(
+        8,
+        "straight-24",
+        40,
+      );
 
-    const selected = selectRouletteRuntimeBootstrapBet(
-      authority,
-      "round-1",
-      accepted,
-      accepted,
-    );
+    const selected =
+      selectRouletteRuntimeBootstrapBet(
+        authority,
+        "round-1",
+        accepted,
+        accepted,
+      );
 
     expect(selected?.revision).toBe(8);
     expect(selected?.stakeCents).toBe(4_000);
     expect(selected?.bets).toEqual([
-      { betId: "straight-25", amount: 40 },
+      {
+        betId: "straight-25",
+        amount: 40,
+      },
     ]);
   });
 });
