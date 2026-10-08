@@ -1,7 +1,4 @@
 import {
-  getRouletteLegacyPaletteSlot,
-} from "./chipTier";
-import {
   clearRouletteAuthorityStore,
   getRouletteAuthorityStoreBets,
   setRouletteAuthorityStoreBets,
@@ -60,29 +57,7 @@ function withAuthoritativePlacements(
   };
 }
 
-/**
- * Transitional compatibility exports for existing callers/tests. They no
- * longer own a separate module-global cache; every call reads/writes the single
- * betAuthorityStore used by round/revision/optimistic metadata as well.
- */
-export function setRouletteAuthoritativeDragPlacements(
-  placements: readonly RouletteBetPlacement[],
-) {
-  setRouletteAuthorityStoreBets(placements);
-}
-
-export function getRouletteAuthoritativeDragPlacements() {
-  return getRouletteAuthorityStoreBets() as
-    RouletteBetPlacement[] | null;
-}
-
-export function clearRouletteAuthoritativeDragPlacements() {
-  clearRouletteAuthorityStore();
-}
-
 export function createRouletteBetState(): RouletteBetState {
-  // A newly mounted runtime/test starts a new local authority boundary. Clear
-  // the whole authority snapshot instead of only clearing a second bet cache.
   clearRouletteAuthorityStore();
 
   return {
@@ -321,18 +296,6 @@ export function compactRouletteBetPlacements(
         }]
       : [];
   });
-}
-
-/**
- * Compatibility bridge for historic chip-* tests/imports. Runtime placed-chip
- * rendering no longer consumes this function after Part 1.
- */
-export function getRouletteDisplayChipValue(
-  amount: number,
-): RouletteChipValue {
-  return getRouletteLegacyPaletteSlot(
-    amount,
-  );
 }
 
 export function getRouletteLastChipByBet(
