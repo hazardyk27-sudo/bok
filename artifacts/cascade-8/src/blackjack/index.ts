@@ -9,6 +9,8 @@ import {
   type BlackjackSuit,
 } from "./blackjackCore";
 import {
+  canDoubleBlackjackHand,
+  doubleBlackjackHand,
   getBlackjackRoundReadiness,
   hitBlackjackHand,
   standBlackjackHand,
@@ -192,26 +194,27 @@ function renderRoundSeat(
   const blackjack = hand.status === "blackjack";
   const resultClass = hand.result ? ` is-result-${hand.result}` : "";
   const actionClass = hand.status === "bust" ? " is-bust" : hand.status === "stood" ? " is-stood" : "";
+  const doubledClass = hand.doubled ? " is-doubled" : "";
   const stateCopy = hand.result
     ? `${hand.result.toUpperCase()} · RETURN ${formatReturnAmount(hand.returnAmount)}`
     : blackjack
       ? "BLACKJACK"
       : hand.status === "bust"
-        ? "BUST"
+        ? hand.doubled ? "DOUBLE · BUST" : "BUST"
         : hand.status === "stood"
-          ? "STAND"
+          ? hand.doubled ? "DOUBLE · STAND" : "STAND"
           : active
             ? "YOUR TURN"
             : "IN ROUND";
 
   return `
-    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${blackjack ? " is-blackjack" : ""}${actionClass}${resultClass}" data-seat="${seat.id}" data-seat-status="inRound">
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${blackjack ? " is-blackjack" : ""}${actionClass}${doubledClass}${resultClass}" data-seat="${seat.id}" data-seat-status="inRound">
       <div class="bj-seat__total">${value.total}</div>
       <div class="bj-seat__cards">
         ${hand.cards.map((card) => renderCard(card)).join("")}
       </div>
       ${renderWagerChips(seat)}
-      <div class="bj-seat__bet">$${hand.wager}</div>
+      <div class="bj-seat__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
       <div class="bj-seat__badge bj-seat__round-badge">
         <span class="bj-seat__person" aria-hidden="true"></span>
         <span><strong>Seat ${seat.id}</strong><small>${stateCopy}</small></span>
@@ -263,7 +266,7 @@ function renderMobileSeatTabs(
                 : hand?.status === "bust"
                   ? "BUST"
                   : hand?.status === "stood"
-                    ? "STAND"
+                    ? hand.doubled ? "X2" : "STAND"
                     : hand
                       ? selected
                         ? "TURN"
@@ -372,16 +375,22 @@ function renderBlackjack(
   selectedChip: BlackjackChipValue,
   round: BlackjackRoundState | null,
 ) {
-  const totalBet = getTotalSeatBet(state);
+  const totalBet = round
+    ? round.hands.reduce((total, hand) => total + hand.wager, 0)
+    : getTotalSeatBet(state);
   const selectedSeat = state.selectedSeatId ? getSeat(state, state.selectedSeatId) : null;
   const bettingLocked = round !== null;
   const canPlaceBet = !bettingLocked && selectedSeat !== null && selectedSeat.status !== "empty";
   const hasSelectedBet = canPlaceBet && selectedSeat.bet > 0;
   const readiness = getBlackjackRoundReadiness(state, TABLE_MIN);
   const canPlayerAct = round?.phase === "playerTurns" && round.activeSeatId !== null;
+  const canDoubleDown = round ? canDoubleBlackjackHand(round) : false;
+  const activeRoundHand = round?.activeSeatId
+    ? round.hands.find((hand) => hand.seatId === round.activeSeatId) ?? null
+    : null;
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="6">
+    <main class="bj-root" data-blackjack-part="7">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -507,7 +516,7 @@ function renderBlackjack(
           <div class="bj-console__round-actions" aria-label="In round actions">
             <button class="bj-round-action bj-round-action--hit" type="button" data-round-action="hit" ${canPlayerAct ? "" : "disabled"}>HIT</button>
             <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="stand" ${canPlayerAct ? "" : "disabled"}>STAND</button>
-            <button class="bj-round-action bj-round-action--double" type="button" disabled>DOUBLE</button>
+            <button class="bj-round-action bj-round-action--double" type="button" data-round-action="doubleDown" ${canDoubleDown ? "" : "disabled"}>DOUBLE${canDoubleDown && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
             <button class="bj-round-action bj-round-action--split" type="button" disabled>SPLIT</button>
           </div>
         </section>
@@ -561,6 +570,15 @@ export function mountBlackjack(app: HTMLDivElement) {
             return;
           }
           const result = standBlackjackHand(round, shoe);
+          round = result.round;
+          shoe = result.shoe;
+          break;
+        }
+        case "doubleDown": {
+          if (!round || !canDoubleBlackjackHand(round)) {
+            return;
+          }
+          const result = doubleBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
           break;
