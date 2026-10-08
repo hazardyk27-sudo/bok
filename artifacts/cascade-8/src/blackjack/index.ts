@@ -10,11 +10,14 @@ import {
 } from "./blackjackCore";
 import {
   canDoubleBlackjackHand,
+  canSplitBlackjackHand,
   doubleBlackjackHand,
   getBlackjackRoundReadiness,
   hitBlackjackHand,
+  splitBlackjackHand,
   standBlackjackHand,
   startBlackjackRound,
+  type BlackjackRoundHand,
   type BlackjackRoundState,
 } from "./roundState";
 import {
@@ -167,13 +170,76 @@ function formatReturnAmount(amount: number | null) {
   return Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`;
 }
 
+function roundHandStateCopy(hand: BlackjackRoundHand, active: boolean) {
+  if (hand.result) {
+    return `${hand.result.toUpperCase()} · RETURN ${formatReturnAmount(hand.returnAmount)}`;
+  }
+  if (hand.status === "blackjack") {
+    return "BLACKJACK";
+  }
+  if (hand.status === "bust") {
+    return hand.doubled ? "DOUBLE · BUST" : "BUST";
+  }
+  if (hand.status === "stood") {
+    return hand.doubled ? "DOUBLE · STAND" : "STAND";
+  }
+  return active ? "YOUR TURN" : "IN ROUND";
+}
+
+function roundHandClasses(hand: BlackjackRoundHand, active: boolean) {
+  const resultClass = hand.result ? ` is-result-${hand.result}` : "";
+  const actionClass = hand.status === "bust" ? " is-bust" : hand.status === "stood" ? " is-stood" : "";
+  const doubledClass = hand.doubled ? " is-doubled" : "";
+  const blackjackClass = hand.status === "blackjack" ? " is-blackjack" : "";
+  return `${active ? " is-active-subhand" : ""}${blackjackClass}${actionClass}${doubledClass}${resultClass}`;
+}
+
+function renderSingleRoundHand(
+  seat: BlackjackSeat,
+  hand: BlackjackRoundHand,
+  active: boolean,
+) {
+  const value = evaluateBlackjackHand(hand.cards);
+  return `
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${roundHandClasses(hand, false)}" data-seat="${seat.id}" data-seat-status="inRound">
+      <div class="bj-seat__total">${value.total}</div>
+      <div class="bj-seat__cards">
+        ${hand.cards.map((card) => renderCard(card)).join("")}
+      </div>
+      ${renderWagerChips(seat)}
+      <div class="bj-seat__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
+      <div class="bj-seat__badge bj-seat__round-badge">
+        <span class="bj-seat__person" aria-hidden="true"></span>
+        <span><strong>Seat ${seat.id}</strong><small>${roundHandStateCopy(hand, active)}</small></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderSplitHand(hand: BlackjackRoundHand, active: boolean) {
+  const value = evaluateBlackjackHand(hand.cards);
+  return `
+    <div class="bj-split-hand${roundHandClasses(hand, active)}" data-hand-id="${hand.handId}">
+      <div class="bj-split-hand__label">HAND ${hand.handIndex + 1}</div>
+      <div class="bj-seat__total">${value.total}</div>
+      <div class="bj-seat__cards">
+        ${hand.cards.map((card) => renderCard(card)).join("")}
+      </div>
+      <div class="bj-split-hand__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
+      <div class="bj-split-hand__status">${roundHandStateCopy(hand, active)}</div>
+    </div>
+  `;
+}
+
 function renderRoundSeat(
   seat: BlackjackSeat,
   round: BlackjackRoundState,
 ) {
-  const hand = round.hands.find((candidate) => candidate.seatId === seat.id);
+  const hands = round.hands
+    .filter((candidate) => candidate.seatId === seat.id)
+    .sort((left, right) => left.handIndex - right.handIndex);
 
-  if (!hand) {
+  if (hands.length === 0) {
     if (seat.status === "empty") {
       return renderEmptySeat(seat, true);
     }
@@ -189,35 +255,25 @@ function renderRoundSeat(
     `;
   }
 
-  const value = evaluateBlackjackHand(hand.cards);
-  const active = round.activeSeatId === seat.id;
-  const blackjack = hand.status === "blackjack";
-  const resultClass = hand.result ? ` is-result-${hand.result}` : "";
-  const actionClass = hand.status === "bust" ? " is-bust" : hand.status === "stood" ? " is-stood" : "";
-  const doubledClass = hand.doubled ? " is-doubled" : "";
-  const stateCopy = hand.result
-    ? `${hand.result.toUpperCase()} · RETURN ${formatReturnAmount(hand.returnAmount)}`
-    : blackjack
-      ? "BLACKJACK"
-      : hand.status === "bust"
-        ? hand.doubled ? "DOUBLE · BUST" : "BUST"
-        : hand.status === "stood"
-          ? hand.doubled ? "DOUBLE · STAND" : "STAND"
-          : active
-            ? "YOUR TURN"
-            : "IN ROUND";
+  if (hands.length === 1) {
+    const hand = hands[0];
+    if (!hand) {
+      return "";
+    }
+    return renderSingleRoundHand(seat, hand, round.activeHandId === hand.handId);
+  }
+
+  const seatActive = hands.some((hand) => hand.handId === round.activeHandId);
+  const seatWager = hands.reduce((total, hand) => total + hand.wager, 0);
 
   return `
-    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${blackjack ? " is-blackjack" : ""}${actionClass}${doubledClass}${resultClass}" data-seat="${seat.id}" data-seat-status="inRound">
-      <div class="bj-seat__total">${value.total}</div>
-      <div class="bj-seat__cards">
-        ${hand.cards.map((card) => renderCard(card)).join("")}
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--split${seatActive ? " is-active-hand" : ""}" data-seat="${seat.id}" data-seat-status="split">
+      <div class="bj-split-hands">
+        ${hands.map((hand) => renderSplitHand(hand, round.activeHandId === hand.handId)).join("")}
       </div>
-      ${renderWagerChips(seat)}
-      <div class="bj-seat__bet">$${hand.wager}${hand.doubled ? " · X2" : ""}</div>
-      <div class="bj-seat__badge bj-seat__round-badge">
+      <div class="bj-seat__badge bj-seat__round-badge bj-seat__round-badge--split">
         <span class="bj-seat__person" aria-hidden="true"></span>
-        <span><strong>Seat ${seat.id}</strong><small>${stateCopy}</small></span>
+        <span><strong>Seat ${seat.id}</strong><small>SPLIT · $${seatWager}</small></span>
       </div>
     </div>
   `;
@@ -250,30 +306,40 @@ function renderMobileSeatTabs(
   return `
     <nav class="bj-mobile-seat-tabs" aria-label="Blackjack seats">
       ${state.seats.map((seat) => {
-        const hand = round?.hands.find((candidate) => candidate.seatId === seat.id);
+        const hands = round?.hands
+          .filter((candidate) => candidate.seatId === seat.id)
+          .sort((left, right) => left.handIndex - right.handIndex) ?? [];
+        const activeHand = hands.find((hand) => hand.handId === round?.activeHandId) ?? null;
         const selected = round
-          ? round.activeSeatId === seat.id
+          ? activeHand !== null
           : state.selectedSeatId === seat.id;
         const occupied = seat.status !== "empty";
         const ready = seat.status === "betReady";
+        const primaryHand = hands[0] ?? null;
         const label = round
-          ? hand?.result === "blackjack"
-            ? "BJ"
-            : hand?.result
-              ? hand.result.toUpperCase()
-              : hand?.status === "blackjack"
-                ? "BJ"
-                : hand?.status === "bust"
-                  ? "BUST"
-                  : hand?.status === "stood"
-                    ? hand.doubled ? "X2" : "STAND"
-                    : hand
-                      ? selected
-                        ? "TURN"
-                        : "PLAY"
-                      : occupied
-                        ? "OUT"
-                        : "EMPTY"
+          ? hands.length > 1
+            ? activeHand
+              ? `H${activeHand.handIndex + 1}`
+              : round.phase === "complete"
+                ? "SPLIT"
+                : "SPLIT"
+            : primaryHand?.result === "blackjack"
+              ? "BJ"
+              : primaryHand?.result
+                ? primaryHand.result.toUpperCase()
+                : primaryHand?.status === "blackjack"
+                  ? "BJ"
+                  : primaryHand?.status === "bust"
+                    ? "BUST"
+                    : primaryHand?.status === "stood"
+                      ? primaryHand.doubled ? "X2" : "STAND"
+                      : primaryHand
+                        ? selected
+                          ? "TURN"
+                          : "PLAY"
+                        : occupied
+                          ? "OUT"
+                          : "EMPTY"
           : ready
             ? "READY"
             : occupied
@@ -330,12 +396,20 @@ function renderRoundStatusCopy(round: BlackjackRoundState) {
       : `Dealer ${dealer.total}${dealer.bust ? " BUST" : ""} · round settled`;
   }
 
-  if (round.phase === "playerTurns" && round.activeSeatId) {
-    const activeHand = round.hands.find((hand) => hand.seatId === round.activeSeatId);
+  if (round.phase === "playerTurns" && round.activeHandId) {
+    const activeHand = round.hands.find((hand) => hand.handId === round.activeHandId);
     const total = activeHand
       ? evaluateBlackjackHand(activeHand.cards).total
       : null;
-    return `Seat ${round.activeSeatId} to act${total === null ? "" : ` · Total ${total}`}`;
+    const seatHandCount = activeHand
+      ? round.hands.filter((hand) => hand.seatId === activeHand.seatId).length
+      : 0;
+    const handLabel = activeHand && seatHandCount > 1
+      ? ` · Hand ${activeHand.handIndex + 1}`
+      : "";
+    return activeHand
+      ? `Seat ${activeHand.seatId}${handLabel} to act${total === null ? "" : ` · Total ${total}`}`
+      : "Player action pending";
   }
 
   return "Dealer playing";
@@ -383,14 +457,15 @@ function renderBlackjack(
   const canPlaceBet = !bettingLocked && selectedSeat !== null && selectedSeat.status !== "empty";
   const hasSelectedBet = canPlaceBet && selectedSeat.bet > 0;
   const readiness = getBlackjackRoundReadiness(state, TABLE_MIN);
-  const canPlayerAct = round?.phase === "playerTurns" && round.activeSeatId !== null;
+  const canPlayerAct = round?.phase === "playerTurns" && round.activeHandId !== null;
   const canDoubleDown = round ? canDoubleBlackjackHand(round) : false;
-  const activeRoundHand = round?.activeSeatId
-    ? round.hands.find((hand) => hand.seatId === round.activeSeatId) ?? null
+  const canSplit = round ? canSplitBlackjackHand(round) : false;
+  const activeRoundHand = round?.activeHandId
+    ? round.hands.find((hand) => hand.handId === round.activeHandId) ?? null
     : null;
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="7">
+    <main class="bj-root" data-blackjack-part="8a">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -517,7 +592,7 @@ function renderBlackjack(
             <button class="bj-round-action bj-round-action--hit" type="button" data-round-action="hit" ${canPlayerAct ? "" : "disabled"}>HIT</button>
             <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="stand" ${canPlayerAct ? "" : "disabled"}>STAND</button>
             <button class="bj-round-action bj-round-action--double" type="button" data-round-action="doubleDown" ${canDoubleDown ? "" : "disabled"}>DOUBLE${canDoubleDown && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
-            <button class="bj-round-action bj-round-action--split" type="button" disabled>SPLIT</button>
+            <button class="bj-round-action bj-round-action--split" type="button" data-round-action="split" ${canSplit ? "" : "disabled"}>SPLIT${canSplit && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
           </div>
         </section>
       </section>
@@ -579,6 +654,15 @@ export function mountBlackjack(app: HTMLDivElement) {
             return;
           }
           const result = doubleBlackjackHand(round, shoe);
+          round = result.round;
+          shoe = result.shoe;
+          break;
+        }
+        case "split": {
+          if (!round || !canSplitBlackjackHand(round)) {
+            return;
+          }
+          const result = splitBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
           break;
