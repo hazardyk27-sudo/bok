@@ -1,6 +1,9 @@
 import { fetchBlackjackServerState } from "./serverApi";
 import { summarizeBlackjackRound } from "./roundSummary";
 
+const RESULT_FALLBACK_BASE_MS = 1700;
+const RESULT_FALLBACK_EXTRA_DEALER_CARD_MS = 800;
+
 function money(amount: number): string {
   return `$${amount.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -23,6 +26,60 @@ function currentRevision(root: HTMLElement): number | null {
 function clearSummary(root: HTMLElement): void {
   root.querySelector(".bj-round-result-summary")?.remove();
   root.querySelector<HTMLElement>(".bj-felt")?.classList.remove("is-round-complete-summary");
+}
+
+export function blackjackResultFallbackDelayMs(dealerCardCount: number): number {
+  const safeCount = Number.isFinite(dealerCardCount)
+    ? Math.max(2, Math.floor(dealerCardCount))
+    : 2;
+  return RESULT_FALLBACK_BASE_MS
+    + Math.max(0, safeCount - 2) * RESULT_FALLBACK_EXTRA_DEALER_CARD_MS;
+}
+
+function reducedMotionPreferred(): boolean {
+  return typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function finiteRunningAnimations(app: HTMLDivElement): Animation[] {
+  if (typeof app.getAnimations !== "function") return [];
+  return app.getAnimations({ subtree: true }).filter((animation) => {
+    if (animation.playState === "finished" || animation.playState === "idle") return false;
+    const endTime = animation.effect?.getComputedTiming().endTime;
+    return typeof endTime === "number" && Number.isFinite(endTime);
+  });
+}
+
+async function waitForBlackjackVisualSettlement(
+  app: HTMLDivElement,
+  dealerCardCount: number,
+): Promise<void> {
+  if (reducedMotionPreferred()) return;
+
+  // Live.ts schedules card/chip animations in requestAnimationFrame after the
+  // authoritative snapshot render. Wait two frames so those animations exist
+  // before deciding the round result can be shown.
+  await nextFrame();
+  await nextFrame();
+
+  const animations = finiteRunningAnimations(app);
+  if (animations.length > 0) {
+    await Promise.allSettled(animations.map((animation) => animation.finished));
+    return;
+  }
+
+  // Fallback for browsers without Web Animations inspection. This mirrors the
+  // physical-table pacing: dealer reveal first, then each extra dealer draw.
+  await sleep(blackjackResultFallbackDelayMs(dealerCardCount));
 }
 
 export function installBlackjackRoundResultOverlay(app: HTMLDivElement): () => void {
@@ -48,8 +105,12 @@ export function installBlackjackRoundResultOverlay(app: HTMLDivElement): () => v
       const snapshot = await fetchBlackjackServerState();
       if (snapshot.revision !== revision || snapshot.round?.phase !== "complete") return;
 
+      const dealerCardCount = snapshot.round.dealer.cards.filter((card) => card !== null).length;
+      await waitForBlackjackVisualSettlement(app, dealerCardCount);
+
       const currentRoot = app.querySelector<HTMLElement>(".bj-root[data-live-authority=\"server\"]");
       if (!currentRoot || currentRevision(currentRoot) !== revision) return;
+      if (!currentRoot.querySelector<HTMLElement>("[data-server-action=\"next\"]")) return;
 
       const felt = currentRoot.querySelector<HTMLElement>(".bj-felt");
       if (!felt) return;
