@@ -41,6 +41,8 @@ case "$game" in
     backend src/roulette
     ;;
   blackjack)
+    pnpm --filter @workspace/cascade-8 exec tsc -p src/blackjack/tsconfig.json --noEmit
+    pnpm --filter @workspace/api-server exec tsc -p src/blackjack/tsconfig.json --noEmit
     frontend src/blackjack
     backend src/blackjack
     ;;
