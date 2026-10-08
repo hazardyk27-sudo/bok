@@ -239,8 +239,9 @@ function acceptConfirmedWrite(
         response.globalBet.revision,
         false,
       );
+      return true;
     }
-    return;
+    return false;
   }
 
   if (
@@ -265,7 +266,10 @@ function acceptConfirmedWrite(
       authority.revision + 1,
       false,
     );
+    return true;
   }
+
+  return false;
 }
 
 export function reserveRouletteExternalLatestMutation() {
@@ -279,7 +283,7 @@ export function confirmRouletteExternalLatestMutation(
   response: RouletteGlobalBetUpdateResponse,
   sequence: number,
 ) {
-  acceptConfirmedWrite(
+  return acceptConfirmedWrite(
     roundId,
     plan,
     response,
