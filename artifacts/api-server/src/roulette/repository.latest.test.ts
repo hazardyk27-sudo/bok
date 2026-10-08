@@ -23,7 +23,10 @@ vi.mock("./globalTableStore", () => ({
   getRouletteGlobalRecentResults: vi.fn(),
 }));
 
-import { RouletteRepository } from "./repository";
+import {
+  RouletteRepository,
+  areRouletteServerBetTopologiesEqual,
+} from "./repository";
 
 beforeEach(() => {
   mocks.getBet.mockReset();
@@ -127,5 +130,86 @@ describe("roulette latest wager write", () => {
 
     expect(result.globalBet?.stakeCents).toBe(16_000);
     expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it("treats equal aggregate topology as already applied even when placement rows are split", () => {
+    expect(
+      areRouletteServerBetTopologiesEqual(
+        [
+          { betId: "straight-8", amount: 40 },
+          { betId: "straight-8", amount: 40 },
+        ],
+        [{ betId: "straight-8", amount: 80 }],
+      ),
+    ).toBe(true);
+  });
+
+  it("does not create a new revision for equal stake and equal aggregate topology", async () => {
+    const current = {
+      globalBet: {
+        revision: 7,
+        stakeCents: 8_000,
+        bets: [
+          { betId: "straight-8", amount: 40 },
+          { betId: "straight-8", amount: 40 },
+        ],
+      },
+      balanceCents: 92_000,
+    };
+    mocks.getBet.mockResolvedValue(current);
+
+    const repository = new RouletteRepository();
+    const result = await repository.updateGlobalBetLatest(
+      "session-1",
+      {
+        roundId: "round-1",
+        bets: [{ betId: "straight-8", amount: 80 }],
+        idempotencyKey: "roulette_fast_double_equal_same",
+        requestReceivedAtMs: 12_345,
+      },
+    );
+
+    expect(result).toBe(current);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it("applies an equal-stake latest plan when the wager topology changed", async () => {
+    mocks.getBet.mockResolvedValue({
+      globalBet: {
+        revision: 7,
+        stakeCents: 8_000,
+        bets: [
+          { betId: "straight-8", amount: 40 },
+          { betId: "red", amount: 40 },
+        ],
+      },
+      balanceCents: 92_000,
+    });
+    mocks.upsert.mockResolvedValue({
+      globalBet: {
+        revision: 8,
+        stakeCents: 8_000,
+        bets: [{ betId: "straight-8", amount: 80 }],
+      },
+      balanceCents: 92_000,
+    });
+
+    const repository = new RouletteRepository();
+    const result = await repository.updateGlobalBetLatest(
+      "session-1",
+      {
+        roundId: "round-1",
+        bets: [{ betId: "straight-8", amount: 80 }],
+        idempotencyKey: "roulette_fast_double_equal_topology",
+        requestReceivedAtMs: 12_345,
+      },
+    );
+
+    expect(result.globalBet?.revision).toBe(8);
+    expect(mocks.upsert).toHaveBeenCalledTimes(1);
+    expect(mocks.upsert.mock.calls[0]![0]).toMatchObject({
+      expectedRevision: 7,
+      bets: [{ betId: "straight-8", amount: 80 }],
+    });
   });
 });

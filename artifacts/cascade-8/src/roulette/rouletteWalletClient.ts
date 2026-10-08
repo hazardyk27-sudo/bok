@@ -1,10 +1,8 @@
 import type {
   RouletteRoundSettlement,
 } from "./betRules";
-import {
-  getRouletteBetTotals,
-  moveRouletteBetPlacements,
-  type RouletteBetPlacement,
+import type {
+  RouletteBetPlacement,
 } from "./betState";
 import type {
   RouletteWinningResult,
@@ -80,118 +78,13 @@ export type RouletteGlobalBetUpdateResponse = {
   balanceCents: number;
 };
 
-export type RouletteBetMoveGuard = {
-  roundId: string;
-  fromBetId: string;
-  toBetId: string;
-  confirmedRevision: number | null;
-  expiresAtMs: number;
-};
-
 const API_BASE = "/api/roulette";
 export const ROULETTE_REQUEST_TIMEOUT_MS = 8_000;
-const ROULETTE_DRAG_GUARD_TTL_MS = 3_000;
 
 function clonePlacements(
   bets: readonly RouletteBetPlacement[],
 ) {
   return bets.map((bet) => ({ ...bet }));
-}
-
-function totalStake(
-  bets: readonly RouletteBetPlacement[],
-) {
-  return bets.reduce(
-    (sum, bet) => sum + bet.amount,
-    0,
-  );
-}
-
-// Kept as pure regression helpers only. The live client no longer owns a
-// second mutable move-guard state; wager topology is owned by betAuthority.
-export function deriveRouletteBetMoveGuard(
-  roundId: string,
-  before: readonly RouletteBetPlacement[],
-  after: readonly RouletteBetPlacement[],
-  nowMs = Date.now(),
-): RouletteBetMoveGuard | null {
-  if (!roundId || totalStake(before) !== totalStake(after)) {
-    return null;
-  }
-
-  const beforeTotals = getRouletteBetTotals(before);
-  const afterTotals = getRouletteBetTotals(after);
-  const keys = new Set([
-    ...Object.keys(beforeTotals),
-    ...Object.keys(afterTotals),
-  ]);
-  const decreased: string[] = [];
-  const increased: string[] = [];
-
-  for (const key of keys) {
-    const delta =
-      (afterTotals[key] ?? 0) -
-      (beforeTotals[key] ?? 0);
-    if (delta < 0) decreased.push(key);
-    if (delta > 0) increased.push(key);
-  }
-
-  if (decreased.length !== 1 || increased.length !== 1) {
-    return null;
-  }
-
-  const fromBetId = decreased[0]!;
-  const toBetId = increased[0]!;
-  const movedAmount = beforeTotals[fromBetId] ?? 0;
-
-  if (
-    movedAmount <= 0 ||
-    (afterTotals[fromBetId] ?? 0) !== 0 ||
-    (afterTotals[toBetId] ?? 0) !==
-      (beforeTotals[toBetId] ?? 0) + movedAmount
-  ) {
-    return null;
-  }
-
-  for (const key of keys) {
-    if (
-      key !== fromBetId &&
-      key !== toBetId &&
-      (beforeTotals[key] ?? 0) !==
-        (afterTotals[key] ?? 0)
-    ) {
-      return null;
-    }
-  }
-
-  return {
-    roundId,
-    fromBetId,
-    toBetId,
-    confirmedRevision: null,
-    expiresAtMs: nowMs + ROULETTE_DRAG_GUARD_TTL_MS,
-  };
-}
-
-export function applyRouletteBetMoveGuard(
-  guard: RouletteBetMoveGuard | null,
-  roundId: string,
-  bets: readonly RouletteBetPlacement[],
-  nowMs = Date.now(),
-) {
-  if (
-    !guard ||
-    guard.roundId !== roundId ||
-    guard.expiresAtMs <= nowMs
-  ) {
-    return clonePlacements(bets);
-  }
-
-  return moveRouletteBetPlacements(
-    bets,
-    guard.fromBetId,
-    guard.toBetId,
-  );
 }
 
 async function readResponse<T>(

@@ -1,28 +1,26 @@
-import {
-  clearRouletteAuthoritativeDragPlacements,
-  getRouletteAuthoritativeDragPlacements,
-  setRouletteAuthoritativeDragPlacements,
-  type RouletteBetPlacement,
+import type {
+  RouletteBetPlacement,
 } from "./betState";
-
-let authorityRoundId: string | null = null;
-let authorityRevision = 0;
-let authorityOptimistic = false;
+import {
+  clearRouletteAuthorityStore,
+  getRouletteAuthorityStoreSnapshot,
+  setRouletteAuthorityStore,
+} from "./betAuthorityStore";
 
 export function getRouletteBetAuthoritySnapshot() {
+  const snapshot =
+    getRouletteAuthorityStoreSnapshot();
+
   return {
-    roundId: authorityRoundId,
-    bets: getRouletteAuthoritativeDragPlacements(),
-    revision: authorityRevision,
-    optimistic: authorityOptimistic,
+    roundId: snapshot.roundId,
+    bets: snapshot.bets as RouletteBetPlacement[] | null,
+    revision: snapshot.revision,
+    optimistic: snapshot.optimistic,
   };
 }
 
 export function clearRouletteBetAuthority() {
-  authorityRoundId = null;
-  authorityRevision = 0;
-  authorityOptimistic = false;
-  clearRouletteAuthoritativeDragPlacements();
+  clearRouletteAuthorityStore();
 }
 
 export function setRouletteBetAuthority(
@@ -31,8 +29,10 @@ export function setRouletteBetAuthority(
   revision: number,
   optimistic: boolean,
 ) {
-  authorityRoundId = roundId;
-  authorityRevision = Math.max(0, revision);
-  authorityOptimistic = optimistic;
-  setRouletteAuthoritativeDragPlacements(bets);
+  setRouletteAuthorityStore(
+    roundId,
+    bets,
+    revision,
+    optimistic,
+  );
 }
