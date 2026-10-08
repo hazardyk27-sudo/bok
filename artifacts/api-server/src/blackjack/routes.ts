@@ -7,6 +7,7 @@ import {
 } from "express";
 import { SESSION_COOKIE } from "../platform/session";
 import {
+  type BlackjackDealSeat,
   type BlackjackServerActionName,
   type BlackjackServerActionRequest,
 } from "../../../cascade-8/src/blackjack/serverContract";
@@ -60,7 +61,26 @@ function statusForError(message: string): number {
   return 400;
 }
 
-function parseActionRequest(body: unknown): BlackjackServerActionRequest {
+function parseDealSeat(value: unknown): BlackjackDealSeat {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("BLACKJACK_INVALID_SEAT");
+  }
+
+  const candidate = value as { seatId?: unknown; wager?: unknown };
+  if (
+    typeof candidate.seatId !== "number" ||
+    typeof candidate.wager !== "number"
+  ) {
+    throw new Error("BLACKJACK_ACTION_INPUT_REQUIRED");
+  }
+
+  return {
+    seatId: candidate.seatId as BlackjackDealSeat["seatId"],
+    wager: candidate.wager,
+  };
+}
+
+export function parseBlackjackActionRequest(body: unknown): BlackjackServerActionRequest {
   const input = body as {
     expectedRevision?: unknown;
     idempotencyKey?: unknown;
@@ -79,21 +99,27 @@ function parseActionRequest(body: unknown): BlackjackServerActionRequest {
     throw new Error("BLACKJACK_ACTION_INPUT_REQUIRED");
   }
 
-  if (input.action === "deal") {
-    if (!Array.isArray(input.seats)) {
-      throw new Error("BLACKJACK_DEAL_SEATS_REQUIRED");
+  if (input.action !== "deal") {
+    if (input.seats !== undefined) {
+      throw new Error("BLACKJACK_ACTION_SEATS_NOT_ALLOWED");
     }
-  } else if (input.seats !== undefined) {
-    throw new Error("BLACKJACK_ACTION_SEATS_NOT_ALLOWED");
+
+    return {
+      expectedRevision: Number(input.expectedRevision),
+      idempotencyKey: input.idempotencyKey,
+      action: input.action as BlackjackServerActionName,
+    };
+  }
+
+  if (!Array.isArray(input.seats)) {
+    throw new Error("BLACKJACK_DEAL_SEATS_REQUIRED");
   }
 
   return {
     expectedRevision: Number(input.expectedRevision),
     idempotencyKey: input.idempotencyKey,
-    action: input.action as BlackjackServerActionName,
-    seats: Array.isArray(input.seats)
-      ? input.seats as BlackjackServerActionRequest["seats"]
-      : undefined,
+    action: "deal",
+    seats: input.seats.map(parseDealSeat),
   };
 }
 
@@ -113,7 +139,7 @@ router.post("/blackjack/action", async (req, res) => {
   const sessionId = getSessionId(req, res);
 
   try {
-    const request = parseActionRequest(req.body);
+    const request = parseBlackjackActionRequest(req.body);
     res.json(await blackjackRepository.applyAction(sessionId, request));
   } catch (error) {
     const message = error instanceof Error
