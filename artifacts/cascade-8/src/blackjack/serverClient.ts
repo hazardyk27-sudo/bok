@@ -17,11 +17,6 @@ export type BlackjackServerTransport = {
   createIdempotencyKey(): string;
 };
 
-export type BlackjackSnapshotBus = {
-  publish(snapshot: BlackjackServerSnapshot): void;
-  subscribe(listener: (snapshot: BlackjackServerSnapshot) => void): () => void;
-};
-
 export type BlackjackServerClientListener = (
   snapshot: BlackjackServerSnapshot,
 ) => void;
@@ -56,16 +51,10 @@ export class BlackjackServerClient {
   private snapshot: BlackjackServerSnapshot | null = null;
   private readonly listeners = new Set<BlackjackServerClientListener>();
   private queue: Promise<unknown> = Promise.resolve();
-  private readonly unsubscribeBus: (() => void) | null;
 
   constructor(
     private readonly transport: BlackjackServerTransport = browserTransport,
-    private readonly bus: BlackjackSnapshotBus | null = null,
-  ) {
-    this.unsubscribeBus = bus?.subscribe((snapshot) => {
-      this.acceptSnapshot(snapshot, false);
-    }) ?? null;
-  }
+  ) {}
 
   getSnapshot(): BlackjackServerSnapshot | null {
     return this.snapshot;
@@ -79,7 +68,7 @@ export class BlackjackServerClient {
 
   async connect(): Promise<BlackjackServerSnapshot> {
     const snapshot = await this.transport.fetchState();
-    this.acceptSnapshot(snapshot, true);
+    this.acceptSnapshot(snapshot);
     return this.snapshot ?? snapshot;
   }
 
@@ -102,7 +91,7 @@ export class BlackjackServerClient {
 
       try {
         const snapshot = await this.transport.sendAction(request);
-        this.acceptSnapshot(snapshot, true);
+        this.acceptSnapshot(snapshot);
         return snapshot;
       } catch (error) {
         if (
@@ -110,7 +99,7 @@ export class BlackjackServerClient {
           error.message === "BLACKJACK_STALE_REVISION"
         ) {
           const latest = error.snapshot ?? await this.transport.fetchState();
-          this.acceptSnapshot(latest, true);
+          this.acceptSnapshot(latest);
           throw new BlackjackStaleActionError(latest);
         }
         throw error;
@@ -125,46 +114,36 @@ export class BlackjackServerClient {
     return result;
   }
 
-  ingestExternalSnapshot(snapshot: BlackjackServerSnapshot): void {
-    this.acceptSnapshot(snapshot, false);
-  }
-
   destroy(): void {
-    this.unsubscribeBus?.();
     this.listeners.clear();
   }
 
-  private acceptSnapshot(
-    snapshot: BlackjackServerSnapshot,
-    publish: boolean,
-  ): void {
+  private acceptSnapshot(snapshot: BlackjackServerSnapshot): void {
     if (!shouldAcceptSnapshot(this.snapshot, snapshot)) return;
     this.snapshot = snapshot;
     for (const listener of this.listeners) listener(snapshot);
-    if (publish) this.bus?.publish(snapshot);
   }
 }
 
-export function createBlackjackBroadcastSnapshotBus(
-  channelName = "blackjack-authority-v1",
-): BlackjackSnapshotBus | null {
-  if (typeof BroadcastChannel === "undefined") return null;
+export function installBlackjackReconnectListeners(
+  client: BlackjackServerClient,
+): () => void {
+  if (typeof window === "undefined") return () => undefined;
 
-  const channel = new BroadcastChannel(channelName);
-  const listeners = new Set<(snapshot: BlackjackServerSnapshot) => void>();
-  channel.addEventListener("message", (event: MessageEvent<BlackjackServerSnapshot>) => {
-    const snapshot = event.data;
-    if (!snapshot || typeof snapshot.revision !== "number") return;
-    for (const listener of listeners) listener(snapshot);
-  });
+  const refresh = () => {
+    void client.refresh().catch(() => {
+      // Keep the last authoritative snapshot visible during a temporary outage.
+      // The next focus/pageshow/online event will attempt another GET resync.
+    });
+  };
 
-  return {
-    publish(snapshot) {
-      channel.postMessage(snapshot);
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+  window.addEventListener("focus", refresh);
+  window.addEventListener("pageshow", refresh);
+  window.addEventListener("online", refresh);
+
+  return () => {
+    window.removeEventListener("focus", refresh);
+    window.removeEventListener("pageshow", refresh);
+    window.removeEventListener("online", refresh);
   };
 }
