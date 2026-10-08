@@ -128,7 +128,7 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
   });
 
-  it("deducts immediately on the serialized path and rejects stale poll balance while optimistic", async () => {
+  it("keeps a newer serialized reservation over an older higher server repaint", async () => {
     const app = document.createElement("div");
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
@@ -164,12 +164,48 @@ describe("roulette fast normal placement", () => {
     )!;
     expect(balance.textContent).toBe("$90");
 
-    // Simulate a background /state poll repainting the last server balance while
-    // the local wager is still optimistic. The visible reservation must win.
+    // The normal runtime bubble handler adopts the new plan in the same click
+    // task. Model that handoff before the queued microtask validates it.
+    setRouletteBetAuthority(
+      "round-1",
+      [
+        { betId: "straight-19", amount: 10 },
+        { betId: "straight-19", amount: 10 },
+      ],
+      4,
+      true,
+    );
+
+    await Promise.resolve();
+
+    // An older drag/poll response paints the previous $100 server balance after
+    // the newer click. The newer $90 local reservation must win immediately.
     balance.textContent = "$100";
     await Promise.resolve();
     await Promise.resolve();
+    expect(balance.textContent).toBe("$90");
 
+    // Even if the older write flips optimistic false, its higher balance must not
+    // overwrite the newer plan's reserved wallet value.
+    setRouletteBetAuthority(
+      "round-1",
+      [
+        { betId: "straight-19", amount: 10 },
+        { betId: "straight-19", amount: 10 },
+      ],
+      5,
+      false,
+    );
+    balance.textContent = "$100";
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(balance.textContent).toBe("$90");
+
+    // Once the matching server balance itself arrives, local display ownership
+    // can be released without changing the visible value.
+    balance.textContent = "$90";
+    await Promise.resolve();
+    await Promise.resolve();
     expect(balance.textContent).toBe("$90");
   });
 });
