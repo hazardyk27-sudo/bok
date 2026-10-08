@@ -1,9 +1,11 @@
 .roulette-casino-chip {
-  --casino-chip-main: #f1f1ee;
-  --casino-chip-inner: #d9d9d4;
-  --casino-chip-ink: #1a1a1a;
-  --casino-chip-accent: #303236;
-  --casino-chip-highlight: #ffffff;
+  /* ONLY this variable may change by amount/tier. */
+  --casino-chip-base: #f1f1ee;
+
+  /* Fixed physical design. Never vary these by tier. */
+  --casino-chip-inner-fixed: #e4e4df;
+  --casino-chip-accent-fixed: #303236;
+  --casino-chip-ink-fixed: #171719;
   --casino-chip-face:
     radial-gradient(
       circle at 50% 42%,
@@ -13,23 +15,23 @@
     ),
     radial-gradient(
       circle at 50% 50%,
-      var(--casino-chip-inner) 0 42%,
+      var(--casino-chip-inner-fixed) 0 42%,
       rgba(255, 255, 255, 0.92) 43% 46%,
-      var(--casino-chip-main) 47% 66%,
+      var(--casino-chip-base) 47% 66%,
       transparent 67%
     ),
     repeating-conic-gradient(
       from -6deg,
-      var(--casino-chip-accent) 0deg 13deg,
-      var(--casino-chip-main) 13deg 60deg
+      var(--casino-chip-accent-fixed) 0deg 13deg,
+      var(--casino-chip-base) 13deg 60deg
     );
   position: relative;
   isolation: isolate;
   overflow: visible !important;
   border: 0 !important;
   border-radius: 50% !important;
-  color: var(--casino-chip-ink) !important;
-  background-color: var(--casino-chip-main) !important;
+  color: var(--casino-chip-ink-fixed) !important;
+  background-color: var(--casino-chip-base) !important;
   background-image: var(--casino-chip-face) !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
@@ -37,7 +39,7 @@
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.42) inset,
     0 -2px 0 rgba(0, 0, 0, 0.22) inset,
-    0 2px 0 color-mix(in srgb, var(--casino-chip-main) 68%, #000 32%),
+    0 2px 0 rgba(0, 0, 0, 0.30),
     0 4px 8px rgba(0, 0, 0, 0.34) !important;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
 }
@@ -49,7 +51,7 @@
 .roulette-page .roulette-placed-chip.roulette-casino-chip {
   border: 0 !important;
   border-radius: 50% !important;
-  background-color: var(--casino-chip-main) !important;
+  background-color: var(--casino-chip-base) !important;
   background-image: var(--casino-chip-face) !important;
   background-repeat: no-repeat !important;
   background-position: center !important;
@@ -103,7 +105,7 @@
   place-items: center !important;
   pointer-events: none !important;
   line-height: 1 !important;
-  color: var(--casino-chip-ink) !important;
+  color: var(--casino-chip-ink-fixed) !important;
   font-family:
     Inter,
     ui-sans-serif,
@@ -114,7 +116,7 @@
     sans-serif !important;
   font-weight: 900 !important;
   letter-spacing: -0.04em !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.24) !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.34) !important;
 }
 
 .roulette-chip-option.roulette-casino-chip,
@@ -152,15 +154,15 @@
 }
 
 .roulette-chip-option.roulette-casino-chip:hover {
-  filter: brightness(1.06) saturate(1.03) !important;
+  filter: brightness(1.06) !important;
 }
 
 .roulette-chip-option.roulette-casino-chip[aria-pressed="true"] {
   transform: translateY(-2px) scale(1.07);
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 4px color-mix(in srgb, var(--casino-chip-highlight) 58%, transparent),
-    0 2px 0 color-mix(in srgb, var(--casino-chip-main) 68%, #000 32%),
+    0 0 0 4px rgba(255, 255, 255, 0.24),
+    0 2px 0 rgba(0, 0, 0, 0.30),
     0 7px 13px rgba(0, 0, 0, 0.44) !important;
 }
 
@@ -168,7 +170,7 @@
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.42) inset,
     0 -2px 0 rgba(0, 0, 0, 0.22) inset,
-    0 2px 0 color-mix(in srgb, var(--casino-chip-main) 68%, #000 32%),
+    0 2px 0 rgba(0, 0, 0, 0.30),
     0 4px 8px rgba(0, 0, 0, 0.34) !important;
 }
 
@@ -197,7 +199,7 @@
   font-size: inherit !important;
 }
 
-/* Keep straight-up numbers readable while preserving the identical face. */
+/* Position may differ by table cell. Physical face never does. */
 .roulette-page .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
 .roulette-page .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip,
 .roulette-page[data-phase="betting"] .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
@@ -230,10 +232,6 @@
 .roulette-page .roulette-zero-cell.is-result-number > .roulette-placed-chip.roulette-casino-chip {
   transform: scale(1.04) !important;
   transform-origin: 100% 100%;
-}
-
-.roulette-casino-chip[data-chip-tier="white"] > .roulette-chip-face-value {
-  text-shadow: none !important;
 }
 
 @media (max-width: 900px) and (orientation: portrait) {
