@@ -54,6 +54,85 @@ export function getRouletteChipStackDepth(
     : 0;
 }
 
+function setImportantStyle(
+  element: HTMLElement,
+  property: string,
+  value: string,
+) {
+  element.style.setProperty(
+    property,
+    value,
+    "important",
+  );
+}
+
+/**
+ * roulette.css still contains historic !important chip paint rules used by old
+ * denomination skins. The canonical chip must win that cascade deterministically.
+ * These values are IDENTICAL for every amount; only --casino-chip-base below is
+ * allowed to change by tier.
+ */
+function applyRouletteCanonicalChipPaint(
+  element: HTMLElement,
+) {
+  setImportantStyle(element, "border", "0");
+  setImportantStyle(
+    element,
+    "border-radius",
+    "50%",
+  );
+  setImportantStyle(
+    element,
+    "color",
+    "var(--casino-chip-ink-fixed)",
+  );
+  setImportantStyle(
+    element,
+    "background-color",
+    "var(--casino-chip-base)",
+  );
+  setImportantStyle(
+    element,
+    "background-image",
+    "var(--casino-chip-face)",
+  );
+  setImportantStyle(
+    element,
+    "background-repeat",
+    "no-repeat",
+  );
+  setImportantStyle(
+    element,
+    "background-position",
+    "center",
+  );
+  setImportantStyle(
+    element,
+    "background-size",
+    "100% 100%",
+  );
+  setImportantStyle(
+    element,
+    "box-shadow",
+    "0 1px 0 rgba(255,255,255,0.42) inset, 0 -2px 0 rgba(0,0,0,0.22) inset, 0 2px 0 rgba(0,0,0,0.30), 0 4px 8px rgba(0,0,0,0.34)",
+  );
+  setImportantStyle(
+    element,
+    "filter",
+    "none",
+  );
+  setImportantStyle(
+    element,
+    "opacity",
+    "1",
+  );
+  setImportantStyle(
+    element,
+    "mix-blend-mode",
+    "normal",
+  );
+}
+
 export function applyRouletteChipVisualState(
   element: HTMLElement,
   amount: number,
@@ -73,6 +152,7 @@ export function applyRouletteChipVisualState(
     "--casino-chip-base",
     palette.base,
   );
+  applyRouletteCanonicalChipPaint(element);
 
   return true;
 }
@@ -89,13 +169,19 @@ const LEGACY_PLACED_FACE_VARIABLES = [
 ] as const;
 
 const LEGACY_SOURCE_MIRROR_PROPERTIES = [
+  "background",
   "background-color",
   "background-image",
   "background-repeat",
   "background-position",
   "background-size",
+  "border",
+  "border-color",
   "box-shadow",
   "color",
+  "filter",
+  "mix-blend-mode",
+  "opacity",
   "text-shadow",
   "font-family",
   "font-weight",
@@ -123,14 +209,6 @@ export function clearRouletteLegacyPlacedChipFace(
   }
 
   delete element.dataset.chipFaceSourceValue;
-}
-
-function setImportantStyle(
-  element: HTMLElement,
-  property: string,
-  value: string,
-) {
-  element.style.setProperty(property, value, "important");
 }
 
 function anchorPlacedChip(
