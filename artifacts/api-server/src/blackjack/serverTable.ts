@@ -13,6 +13,7 @@ import {
   canTakeBlackjackInsurance,
   declineBlackjackInsurance,
   doubleBlackjackHand,
+  getActiveBlackjackRoundHand,
   hitBlackjackHand,
   splitBlackjackHand,
   standBlackjackHand,
@@ -64,17 +65,17 @@ export function normalizeBlackjackDealSeats(
 
   const seen = new Set<BlackjackSeatId>();
   const normalized = seats.map((seat) => {
-    const seatId = Number(seat?.seatId);
-    const wager = Number(seat?.wager);
-    const wagerCents = wager * 100;
+    const seatId = seat?.seatId;
+    const wager = seat?.wager;
 
-    if (!Number.isInteger(seatId) || !isSeatId(seatId)) {
+    if (typeof seatId !== "number" || !Number.isInteger(seatId) || !isSeatId(seatId)) {
       throw new Error("BLACKJACK_INVALID_SEAT");
     }
     if (
+      typeof wager !== "number" ||
       !Number.isSafeInteger(wager) ||
       wager < BLACKJACK_TABLE_MIN ||
-      !Number.isSafeInteger(wagerCents)
+      !Number.isSafeInteger(wager * 100)
     ) {
       throw new Error("BLACKJACK_INVALID_WAGER");
     }
@@ -121,6 +122,11 @@ export function allowedBlackjackServerActions(
   }
 
   if (round.phase === "playerTurns") {
+    const activeHand = getActiveBlackjackRoundHand(round);
+    if (!activeHand || activeHand.status !== "playing") {
+      return [];
+    }
+
     const actions: BlackjackServerActionName[] = ["hit", "stand"];
     if (canDoubleBlackjackHand(round)) actions.push("double");
     if (canSplitBlackjackHand(round)) actions.push("split");
@@ -140,8 +146,7 @@ export function publicBlackjackRound(round: BlackjackRoundState): BlackjackPubli
     throw new Error("BLACKJACK_DEALER_UPCARD_MISSING");
   }
 
-  const revealHoleCard = round.phase === "complete";
-  const holeCard = revealHoleCard ? round.dealer.cards[1] ?? null : null;
+  const revealDealerHand = round.phase === "complete";
 
   return {
     phase: round.phase,
@@ -150,8 +155,10 @@ export function publicBlackjackRound(round: BlackjackRoundState): BlackjackPubli
       cards: [...hand.cards],
     })),
     dealer: {
-      cards: [upcard, holeCard],
-      blackjack: revealHoleCard ? round.dealer.blackjack : null,
+      cards: revealDealerHand
+        ? [...round.dealer.cards]
+        : [upcard, null],
+      blackjack: revealDealerHand ? round.dealer.blackjack : null,
     },
     activeHandId: round.activeHandId,
     activeSeatId: round.activeSeatId,
@@ -228,7 +235,7 @@ export function transitionBlackjackServerSession(
       break;
     }
     case "hit": {
-      if (!round || round.phase !== "playerTurns") {
+      if (!round || !allowedBlackjackServerActions(round).includes("hit")) {
         throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
       }
       const result = hitBlackjackHand(round, shoe);
@@ -237,7 +244,7 @@ export function transitionBlackjackServerSession(
       break;
     }
     case "stand": {
-      if (!round || round.phase !== "playerTurns") {
+      if (!round || !allowedBlackjackServerActions(round).includes("stand")) {
         throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
       }
       const result = standBlackjackHand(round, shoe);
@@ -273,7 +280,7 @@ export function transitionBlackjackServerSession(
       break;
     }
     case "declineInsurance": {
-      if (!round || round.phase !== "insurance" || !round.activeHandId) {
+      if (!round || !allowedBlackjackServerActions(round).includes("declineInsurance")) {
         throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
       }
       const result = declineBlackjackInsurance(round, shoe);
