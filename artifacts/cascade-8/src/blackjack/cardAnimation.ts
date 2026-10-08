@@ -101,7 +101,13 @@ function shouldRevealHoleCard(
 
   const previousHole = previous.dealer.cards[1];
   const nextHole = next.dealer.cards[1];
-  return Boolean(previousHole && nextHole && previousHole.id === nextHole.id);
+  if (!nextHole) return false;
+
+  // Local/demo rounds already know the hidden physical hole-card ID, while the
+  // server-authoritative public snapshot intentionally redacts it until the
+  // round completes. Treat a newly materialized second dealer card as a reveal
+  // rather than a fresh draw so the secure snapshot still gets a flip effect.
+  return previousHole ? previousHole.id === nextHole.id : previous.dealer.cards.length === 1;
 }
 
 function totalDuration(steps: readonly BlackjackCardAnimationStep[]): number {
@@ -157,20 +163,20 @@ export function buildBlackjackCardAnimationPlan(
     order += 1;
   }
 
-  if (shouldRevealHoleCard(previous, next)) {
-    const hole = next.dealer.cards[1];
-    if (hole) {
-      steps.push({
-        cardId: hole.id,
-        kind: "holeReveal",
-        order,
-        delayMs: order * ACTION_GAP_MS,
-      });
-      order += 1;
-    }
+  const revealHole = shouldRevealHoleCard(previous, next);
+  const revealedHole = revealHole ? next.dealer.cards[1] ?? null : null;
+  if (revealedHole) {
+    steps.push({
+      cardId: revealedHole.id,
+      kind: "holeReveal",
+      order,
+      delayMs: order * ACTION_GAP_MS,
+    });
+    order += 1;
   }
 
   for (const card of newDealerCards(previous, next)) {
+    if (revealedHole && card.id === revealedHole.id) continue;
     steps.push({
       cardId: card.id,
       kind: "dealerDraw",
