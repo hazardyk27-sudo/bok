@@ -107,6 +107,21 @@
   color: #e4cf9b;
 }
 
+.bj-seat.is-doubled:not(.is-result-win):not(.is-result-lose):not(.is-result-push) .bj-seat__badge {
+  border-color: rgba(243, 200, 110, 0.9);
+  box-shadow: 0 0 18px rgba(243, 200, 110, 0.22);
+}
+
+.bj-seat.is-doubled .bj-seat__bet {
+  color: #f3c86e;
+  font-weight: 900;
+}
+
+.bj-round-action--double:not(:disabled) {
+  border-color: rgba(243, 200, 110, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(243, 200, 110, 0.12), 0 0 18px rgba(243, 200, 110, 0.2);
+}
+
 .bj-seat--sitting-out .bj-seat__bet-circle {
   display: flex;
   align-items: center;
