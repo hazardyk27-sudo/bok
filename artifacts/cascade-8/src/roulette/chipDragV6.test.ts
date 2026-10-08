@@ -124,19 +124,37 @@ describe("roulette single-authority chip drag v6", () => {
     ).toThrow("ROULETTE_DRAG_SOURCE_MISSING");
   });
 
-  it("re-reads authority after the visual snap instead of committing the drop snapshot", () => {
+  it("moves authority and starts the write before the visual snap timeout", () => {
     const snapIndex = dragSource.indexOf(
       "snapGhostToCell(completed, targetCell);",
     );
     const latestAuthorityIndex = dragSource.indexOf(
       "const latestAuthority =",
+      snapIndex,
+    );
+    const setAuthorityIndex = dragSource.indexOf(
+      "setRouletteBetAuthority(",
+      latestAuthorityIndex,
+    );
+    const renderIndex = dragSource.indexOf(
+      "renderRouletteBetTopology(app, nextBets);",
+      setAuthorityIndex,
+    );
+    const commitIndex = dragSource.indexOf(
+      "void commitRouletteSequentialChipMove(",
+      renderIndex,
+    );
+    const visualTimeoutIndex = dragSource.indexOf(
+      "window.setTimeout(() => {\n      completed.ghost.remove();",
+      commitIndex,
     );
 
     expect(snapIndex).toBeGreaterThanOrEqual(0);
     expect(latestAuthorityIndex).toBeGreaterThan(snapIndex);
-    expect(dragSource).not.toContain(
-      "authority.roundId!,\n        authority.revision,\n        currentBets",
-    );
+    expect(setAuthorityIndex).toBeGreaterThan(latestAuthorityIndex);
+    expect(renderIndex).toBeGreaterThan(setAuthorityIndex);
+    expect(commitIndex).toBeGreaterThan(renderIndex);
+    expect(visualTimeoutIndex).toBeGreaterThan(commitIndex);
   });
 
   it("never fakes a browser visibility lifecycle event to refresh drag state", () => {
@@ -144,7 +162,7 @@ describe("roulette single-authority chip drag v6", () => {
       "new Event(\"visibilitychange\")",
     );
     expect(dragSource).toContain(
-      "renderAuthorityBets(app)",
+      "renderRouletteCurrentAuthorityBets(app)",
     );
   });
 });

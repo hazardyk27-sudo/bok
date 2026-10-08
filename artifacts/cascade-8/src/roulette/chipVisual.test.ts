@@ -28,7 +28,7 @@ describe("roulette casino chip visuals", () => {
     ]);
   });
 
-  it("maps exact range boundaries and the aggregate 200 wager to the approved colors", () => {
+  it("maps exact range boundaries and aggregate wagers to the approved colors", () => {
     expect(getRouletteChipTier(10)).toBe("white");
     expect(getRouletteChipTier(49)).toBe("white");
     expect(getRouletteChipTier(50)).toBe("blue");
@@ -56,13 +56,11 @@ describe("roulette casino chip visuals", () => {
     );
   });
 
-  it("keeps a single denomination flat and stacks aggregate wagers", () => {
-    expect(getRouletteChipStackDepth(10)).toBe(1);
-    expect(getRouletteChipStackDepth(50)).toBe(1);
-    expect(getRouletteChipStackDepth(5_000)).toBe(1);
-    expect(getRouletteChipStackDepth(20)).toBe(2);
-    expect(getRouletteChipStackDepth(150)).toBe(2);
-    expect(getRouletteChipStackDepth(1_500)).toBe(3);
+  it("uses one physical chip face for denominations and aggregate amounts", () => {
+    [10, 20, 40, 50, 60, 100, 150, 1_500, 5_000]
+      .forEach((amount) => {
+        expect(getRouletteChipStackDepth(amount)).toBe(1);
+      });
   });
 
   it("strips the historic blue $10 face before applying aggregate amount color", () => {
@@ -71,6 +69,7 @@ describe("roulette casino chip visuals", () => {
     chip.className = "roulette-placed-chip chip-10";
     chip.dataset.betAmount = "20";
     chip.dataset.chipFaceSourceValue = "10";
+    chip.dataset.stackDepth = "3";
     chip.style.setProperty("--chip-fill", "#3b8ce0");
     chip.style.setProperty("--chip-ink", "#ffffff");
     chip.style.setProperty("background-color", "rgb(47, 120, 200)", "important");
@@ -81,6 +80,7 @@ describe("roulette casino chip visuals", () => {
     expect(chip.style.getPropertyValue("--chip-fill")).toBe("");
     expect(chip.style.getPropertyValue("background-color")).toBe("");
     expect(chip.dataset.chipFaceSourceValue).toBeUndefined();
+    expect(chip.dataset.stackDepth).toBeUndefined();
     expect(chip.dataset.chipTier).toBe("white");
     expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
       ROULETTE_CHIP_PALETTES.white.main,
@@ -88,12 +88,14 @@ describe("roulette casino chip visuals", () => {
 
     expect(syncRoulettePlacedChipVisual(chip, 80)).toBe(true);
     expect(chip.dataset.chipTier).toBe("blue");
+    expect(chip.dataset.stackDepth).toBeUndefined();
     expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
       ROULETTE_CHIP_PALETTES.blue.main,
     );
 
     expect(syncRoulettePlacedChipVisual(chip, 160)).toBe(true);
     expect(chip.dataset.chipTier).toBe("green");
+    expect(chip.dataset.stackDepth).toBeUndefined();
     expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
       ROULETTE_CHIP_PALETTES.green.main,
     );
@@ -115,6 +117,7 @@ describe("roulette casino chip visuals", () => {
     expect(12 * 20).toBe(240);
     chips.forEach((chip) => {
       expect(chip.dataset.chipTier).toBe("white");
+      expect(chip.dataset.stackDepth).toBeUndefined();
       expect(chip.classList.contains("chip-10")).toBe(false);
       expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
         ROULETTE_CHIP_PALETTES.white.main,

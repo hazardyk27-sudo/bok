@@ -125,13 +125,13 @@ export function renderRouletteBetTable() {
     .map(
       (value) => `
         <button
-          class="roulette-chip-option chip-${value}"
+          class="roulette-chip-option roulette-casino-chip"
           type="button"
           data-chip-value="${value}"
           aria-label="Select ${value} chip"
           aria-pressed="${value === 10 ? "true" : "false"}"
         >
-          <span>${value}</span>
+          <span class="roulette-chip-face-value">${value}</span>
         </button>
       `,
     )
@@ -288,13 +288,13 @@ export function renderRouletteBetTable() {
 
           <div class="roulette-mobile-chip-picker" data-mobile-chip-picker>
             <button
-              class="roulette-mobile-rail-button roulette-mobile-chip-toggle chip-10"
+              class="roulette-mobile-rail-button roulette-mobile-chip-toggle roulette-casino-chip"
               type="button"
               data-mobile-chip-toggle
               aria-label="Choose chip"
               aria-expanded="false"
             >
-              <span data-mobile-selected-chip>10</span>
+              <span class="roulette-chip-face-value" data-mobile-selected-chip>10</span>
             </button>
             <div
               class="roulette-mobile-chip-menu"
