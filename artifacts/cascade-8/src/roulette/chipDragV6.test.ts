@@ -15,21 +15,9 @@ describe("roulette single-authority chip drag v6", () => {
   it("moves the same wager repeatedly without changing total stake", () => {
     let bets = [{ betId: "straight-14", amount: 10 }];
 
-    bets = createRouletteMovedBets(
-      bets,
-      "straight-14",
-      "straight-17",
-    );
-    bets = createRouletteMovedBets(
-      bets,
-      "straight-17",
-      "straight-20",
-    );
-    bets = createRouletteMovedBets(
-      bets,
-      "straight-20",
-      "straight-23",
-    );
+    bets = createRouletteMovedBets(bets, "straight-14", "straight-17");
+    bets = createRouletteMovedBets(bets, "straight-17", "straight-20");
+    bets = createRouletteMovedBets(bets, "straight-20", "straight-23");
 
     expect(bets).toEqual([
       { betId: "straight-23", amount: 10 },
@@ -155,6 +143,16 @@ describe("roulette single-authority chip drag v6", () => {
     expect(renderIndex).toBeGreaterThan(setAuthorityIndex);
     expect(commitIndex).toBeGreaterThan(renderIndex);
     expect(visualTimeoutIndex).toBeGreaterThan(commitIndex);
+  });
+
+  it("never turns a stationary tap on an occupied chip into a drag", () => {
+    expect(dragSource).not.toContain("HOLD_MS");
+    expect(dragSource).not.toContain("setTimeout(startDrag");
+    expect(dragSource).not.toContain("press.timer");
+    expect(dragSource).toContain("distance >= EARLY_DRAG_DISTANCE_PX");
+    expect(dragSource).toContain(
+      "performance.now() - press.startedAt >= EARLY_DRAG_MS",
+    );
   });
 
   it("never fakes a browser visibility lifecycle event to refresh drag state", () => {
