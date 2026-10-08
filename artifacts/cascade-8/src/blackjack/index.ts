@@ -1,14 +1,18 @@
 import "./blackjack.css";
 import "./mobile.css";
 import "./seatState.css";
+import "./betting.css";
 import {
+  addSeatChip,
   createInitialSeatState,
   getOccupiedSeats,
   getSeat,
   getTotalSeatBet,
+  isBlackjackChipValue,
   leaveSeat,
   selectSeat,
   sitAtSeat,
+  type BlackjackChipValue,
   type BlackjackSeat,
   type BlackjackSeatId,
   type BlackjackSeatState,
@@ -20,6 +24,8 @@ type DemoHand = {
   total: number;
   cards: DemoCard[];
 };
+
+const TABLE_MIN = 10;
 
 const DEMO_HANDS: Partial<Record<BlackjackSeatId, DemoHand>> = {
   1: {
@@ -45,12 +51,38 @@ const DEMO_HANDS: Partial<Record<BlackjackSeatId, DemoHand>> = {
   },
 };
 
+const CHIP_VARIANT: Record<BlackjackChipValue, string> = {
+  1: "white",
+  5: "red",
+  25: "green",
+  100: "blue",
+  500: "black",
+};
+
 function renderCard(card: DemoCard) {
   return `
     <div class="bj-card${card.red ? " bj-card--red" : ""}" aria-label="${card.rank}${card.suit}">
       <span class="bj-card__rank">${card.rank}</span>
       <span class="bj-card__suit">${card.suit}</span>
       <span class="bj-card__pip">${card.suit}</span>
+    </div>
+  `;
+}
+
+function renderWagerChips(seat: BlackjackSeat) {
+  if (seat.chips.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="bj-seat__chip-stack" aria-label="Seat ${seat.id} wager chips">
+      ${seat.chips.slice(-4).map((chip, index) => `
+        <span
+          class="bj-wager-chip bj-wager-chip--${CHIP_VARIANT[chip]}"
+          style="--bj-chip-index:${index}"
+          aria-label="$${chip} chip"
+        ><span>${chip}</span></span>
+      `).join("")}
     </div>
   `;
 }
@@ -68,13 +100,17 @@ function renderEmptySeat(seat: BlackjackSeat) {
 }
 
 function renderSeatedSeat(seat: BlackjackSeat, selected: boolean) {
+  const remaining = Math.max(0, TABLE_MIN - seat.bet);
+
   return `
     <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--seated${selected ? " is-selected" : ""}" data-seat="${seat.id}" data-seat-status="seated">
       <div class="bj-seat__bet-circle">
         <span class="bj-seat__waiting-icon" aria-hidden="true"></span>
         <strong class="bj-seat__waiting-title">SEAT ${seat.id}</strong>
-        <span class="bj-seat__waiting-copy">SELECT CHIP TO BET</span>
+        <span class="bj-seat__waiting-copy">${seat.bet > 0 ? `$${remaining} MORE TO MIN` : "SELECT CHIP TO BET"}</span>
       </div>
+      ${renderWagerChips(seat)}
+      ${seat.bet > 0 ? `<div class="bj-seat__bet">$${seat.bet}</div>` : ""}
       <button class="bj-seat__badge" type="button" data-seat-action="select" data-seat-id="${seat.id}" aria-pressed="${selected}">
         <span class="bj-seat__person" aria-hidden="true"></span>
         <span><strong>Seat ${seat.id}</strong><small>${selected ? "SELECTED" : "SEATED"}</small></span>
@@ -93,11 +129,7 @@ function renderReadySeat(seat: BlackjackSeat, selected: boolean) {
       <div class="bj-seat__cards">
         ${hand?.cards.map(renderCard).join("") ?? ""}
       </div>
-      <div class="bj-seat__chip-stack" aria-hidden="true">
-        <span class="bj-chip bj-chip--green"></span>
-        <span class="bj-chip bj-chip--black"></span>
-        <span class="bj-chip bj-chip--red"></span>
-      </div>
+      ${renderWagerChips(seat)}
       <div class="bj-seat__bet">$${seat.bet}</div>
       <button class="bj-seat__badge" type="button" data-seat-action="select" data-seat-id="${seat.id}" aria-pressed="${selected}">
         <span class="bj-seat__person" aria-hidden="true"></span>
@@ -122,10 +154,17 @@ function renderSeat(seat: BlackjackSeat, selectedSeatId: BlackjackSeatId | null)
   return renderReadySeat(seat, selected);
 }
 
-function chipButton(value: string, variant: string, selected = false) {
+function chipButton(value: BlackjackChipValue, selectedChip: BlackjackChipValue) {
+  const selected = value === selectedChip;
   return `
-    <button class="bj-console-chip bj-console-chip--${variant}${selected ? " is-selected" : ""}" type="button" aria-pressed="${selected}">
-      <span>${value}</span>
+    <button
+      class="bj-console-chip bj-console-chip--${CHIP_VARIANT[value]}${selected ? " is-selected" : ""}"
+      type="button"
+      data-chip-value="${value}"
+      aria-label="Select $${value} chip"
+      aria-pressed="${selected}"
+    >
+      <span>$${value}</span>
     </button>
   `;
 }
@@ -156,7 +195,7 @@ function renderMobileSeatTabs(state: BlackjackSeatState) {
   `;
 }
 
-function renderStatusCopy(state: BlackjackSeatState) {
+function renderStatusCopy(state: BlackjackSeatState, selectedChip: BlackjackChipValue) {
   const occupied = getOccupiedSeats(state);
   const selected = state.selectedSeatId;
 
@@ -164,14 +203,20 @@ function renderStatusCopy(state: BlackjackSeatState) {
     return "Choose a seat to start";
   }
 
-  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""}`;
+  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""} · $${selectedChip} chip`;
 }
 
-function renderBlackjack(app: HTMLDivElement, state: BlackjackSeatState) {
+function renderBlackjack(
+  app: HTMLDivElement,
+  state: BlackjackSeatState,
+  selectedChip: BlackjackChipValue,
+) {
   const totalBet = getTotalSeatBet(state);
+  const selectedSeat = state.selectedSeatId ? getSeat(state, state.selectedSeatId) : null;
+  const canPlaceBet = selectedSeat !== null && selectedSeat.status !== "empty";
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="3">
+    <main class="bj-root" data-blackjack-part="4a">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -191,14 +236,14 @@ function renderBlackjack(app: HTMLDivElement, state: BlackjackSeatState) {
           </div>
           <div class="bj-hud__min">
             <span>TABLE MIN</span>
-            <strong>$10</strong>
+            <strong>$${TABLE_MIN}</strong>
           </div>
         </aside>
 
         <aside class="bj-hud bj-hud--status">
           <span>ROUND STATUS</span>
           <strong>PLACE YOUR BETS</strong>
-          <small>${renderStatusCopy(state)}</small>
+          <small>${renderStatusCopy(state, selectedChip)}</small>
         </aside>
 
         <div class="bj-dealer-zone" aria-label="Dealer">
@@ -265,30 +310,30 @@ function renderBlackjack(app: HTMLDivElement, state: BlackjackSeatState) {
         <section class="bj-console" aria-label="Blackjack controls">
           <div class="bj-console__chips" aria-label="Select chip">
             <button class="bj-chip-arrow" type="button" aria-label="Previous chips">‹</button>
-            ${chipButton("$1", "white")}
-            ${chipButton("$5", "red")}
-            ${chipButton("$25", "green", true)}
-            ${chipButton("$100", "blue")}
-            ${chipButton("$500", "black")}
+            ${chipButton(1, selectedChip)}
+            ${chipButton(5, selectedChip)}
+            ${chipButton(25, selectedChip)}
+            ${chipButton(100, selectedChip)}
+            ${chipButton(500, selectedChip)}
             <button class="bj-chip-arrow" type="button" aria-label="Next chips">›</button>
           </div>
 
           <div class="bj-console__bet-actions">
-            <button class="bj-action bj-action--place" type="button">
+            <button class="bj-action bj-action--place" type="button" data-bet-action="place" ${canPlaceBet ? "" : "disabled"}>
               <span class="bj-action__icon">＋</span>
-              <span><strong>PLACE BET</strong><small>${state.selectedSeatId ? `Seat ${state.selectedSeatId}` : "Select seat"}</small></span>
+              <span><strong>PLACE BET</strong><small>${state.selectedSeatId ? `Seat ${state.selectedSeatId} · +$${selectedChip}` : "Select seat"}</small></span>
             </button>
-            <button class="bj-action bj-action--neutral" type="button">
+            <button class="bj-action bj-action--neutral" type="button" disabled>
               <span class="bj-action__icon">↶</span>
-              <span><strong>UNDO</strong><small>Last chip</small></span>
+              <span><strong>UNDO</strong><small>Part 4B</small></span>
             </button>
-            <button class="bj-action bj-action--gold" type="button">
+            <button class="bj-action bj-action--gold" type="button" disabled>
               <span class="bj-action__icon">X2</span>
-              <span><strong>X2 BET</strong><small>Pre-deal only</small></span>
+              <span><strong>X2 BET</strong><small>Part 4B</small></span>
             </button>
-            <button class="bj-action bj-action--neutral" type="button">
+            <button class="bj-action bj-action--neutral" type="button" disabled>
               <span class="bj-action__icon">⌫</span>
-              <span><strong>CLEAR BET</strong><small>Selected seat</small></span>
+              <span><strong>CLEAR BET</strong><small>Part 4B</small></span>
             </button>
           </div>
 
@@ -311,12 +356,36 @@ function parseSeatId(value: string | undefined): BlackjackSeatId | null {
 
 export function mountBlackjack(app: HTMLDivElement) {
   let state = createInitialSeatState();
+  let selectedChip: BlackjackChipValue = 25;
 
-  const rerender = () => renderBlackjack(app, state);
+  const rerender = () => renderBlackjack(app, state, selectedChip);
 
   app.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+
+    const chipButton = target.closest<HTMLElement>("[data-chip-value]");
+    if (chipButton) {
+      const chipValue = Number(chipButton.dataset.chipValue);
+      if (!isBlackjackChipValue(chipValue)) {
+        return;
+      }
+
+      selectedChip = chipValue;
+      rerender();
+      return;
+    }
+
+    const betAction = target.closest<HTMLElement>("[data-bet-action]");
+    if (betAction?.dataset.betAction === "place") {
+      if (!state.selectedSeatId) {
+        return;
+      }
+
+      state = addSeatChip(state, state.selectedSeatId, selectedChip, TABLE_MIN);
+      rerender();
       return;
     }
 
