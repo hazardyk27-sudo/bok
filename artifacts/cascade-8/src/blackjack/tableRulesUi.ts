@@ -19,10 +19,13 @@ function applySoftTotal(total: HTMLElement, cardScope: Element): void {
   if (ranks.length === 0) return;
   const display = formatBlackjackRanksTotal(ranks);
   if (total.textContent !== display) total.textContent = display;
-  const isSoft = display.includes("/");
+  const isSoft = display.endsWith("· SOFT");
   total.classList.toggle("is-soft-total", isSoft);
   if (isSoft) {
-    total.setAttribute("aria-label", `Soft hand ${display}; Ace may count as 1 or 11`);
+    total.setAttribute(
+      "aria-label",
+      `${display.replace(" · SOFT", "")}, soft hand; Ace currently counts as 11 and may fall to 1 if needed`,
+    );
   } else {
     total.removeAttribute("aria-label");
   }
