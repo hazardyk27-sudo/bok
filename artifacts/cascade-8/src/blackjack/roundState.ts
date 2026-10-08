@@ -15,13 +15,23 @@ import {
 
 export const BLACKJACK_MAX_HANDS_PER_SEAT = 4;
 
-export type BlackjackRoundPhase = "playerTurns" | "dealerTurn" | "complete";
+export type BlackjackRoundPhase =
+  | "insurance"
+  | "playerTurns"
+  | "dealerTurn"
+  | "complete";
 
 export type BlackjackRoundHandStatus =
   | "playing"
   | "stood"
   | "bust"
   | "blackjack";
+
+export type BlackjackInsuranceDecision =
+  | "notOffered"
+  | "pending"
+  | "declined"
+  | "taken";
 
 export type BlackjackHandResult = "win" | "lose" | "push" | "blackjack";
 
@@ -35,6 +45,10 @@ export type BlackjackRoundHand = {
   cards: BlackjackCard[];
   status: BlackjackRoundHandStatus;
   doubled: boolean;
+  insuranceDecision: BlackjackInsuranceDecision;
+  insuranceWager: number;
+  insuranceReturnAmount: number | null;
+  insuranceNetAmount: number | null;
   result: BlackjackHandResult | null;
   returnAmount: number | null;
   netAmount: number | null;
@@ -134,6 +148,22 @@ function nextPlayingHandId(
   return null;
 }
 
+function nextPendingInsuranceHandId(
+  hands: readonly BlackjackRoundHand[],
+  afterHandId: string,
+): string | null {
+  const startIndex = hands.findIndex((hand) => hand.handId === afterHandId);
+
+  for (let index = startIndex + 1; index < hands.length; index += 1) {
+    const hand = hands[index];
+    if (hand?.insuranceDecision === "pending") {
+      return hand.handId;
+    }
+  }
+
+  return null;
+}
+
 function settlementFor(
   hand: BlackjackRoundHand,
   dealerCards: readonly BlackjackCard[],
@@ -174,6 +204,32 @@ function settlementFor(
     returnAmount,
     netAmount: returnAmount - hand.wager,
   };
+}
+
+function settleInsuranceHands(
+  hands: readonly BlackjackRoundHand[],
+  dealerBlackjack: boolean,
+): BlackjackRoundHand[] {
+  return hands.map((hand) => {
+    if (hand.insuranceDecision === "taken") {
+      const returnAmount = dealerBlackjack ? hand.insuranceWager * 3 : 0;
+      return {
+        ...hand,
+        insuranceReturnAmount: returnAmount,
+        insuranceNetAmount: returnAmount - hand.insuranceWager,
+      };
+    }
+
+    if (hand.insuranceDecision === "declined") {
+      return {
+        ...hand,
+        insuranceReturnAmount: 0,
+        insuranceNetAmount: 0,
+      };
+    }
+
+    return hand;
+  });
 }
 
 export function resolveBlackjackDealerTurn(
@@ -219,6 +275,144 @@ export function resolveBlackjackDealerTurn(
       hands: settledHands,
     },
   };
+}
+
+function finishInsurancePhase(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+): BlackjackRoundMutationResult {
+  const hands = settleInsuranceHands(round.hands, round.dealer.blackjack);
+  const settledInsuranceRound: BlackjackRoundState = {
+    ...round,
+    hands,
+    activeHandId: null,
+    activeSeatId: null,
+  };
+
+  if (round.dealer.blackjack) {
+    return resolveBlackjackDealerTurn(
+      {
+        ...settledInsuranceRound,
+        phase: "dealerTurn",
+      },
+      shoe,
+    );
+  }
+
+  const firstPlayableHand = hands.find((hand) => hand.status === "playing") ?? null;
+  if (firstPlayableHand) {
+    return {
+      shoe,
+      round: withActiveHand(
+        {
+          ...settledInsuranceRound,
+          phase: "playerTurns",
+        },
+        firstPlayableHand.handId,
+      ),
+    };
+  }
+
+  return resolveBlackjackDealerTurn(
+    {
+      ...settledInsuranceRound,
+      phase: "dealerTurn",
+    },
+    shoe,
+  );
+}
+
+function advanceInsuranceDecision(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+  finishedHandId: string,
+): BlackjackRoundMutationResult {
+  const nextHandId = nextPendingInsuranceHandId(round.hands, finishedHandId);
+
+  if (nextHandId) {
+    return {
+      shoe,
+      round: withActiveHand(round, nextHandId),
+    };
+  }
+
+  return finishInsurancePhase(round, shoe);
+}
+
+export function getBlackjackInsuranceMaxWager(
+  hand: BlackjackRoundHand,
+): number {
+  return hand.wager / 2;
+}
+
+export function canTakeBlackjackInsurance(round: BlackjackRoundState): boolean {
+  if (round.phase !== "insurance") {
+    return false;
+  }
+
+  const activeHand = getActiveBlackjackRoundHand(round);
+  return Boolean(activeHand && activeHand.insuranceDecision === "pending");
+}
+
+export function takeBlackjackInsurance(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+): BlackjackRoundMutationResult {
+  if (!canTakeBlackjackInsurance(round)) {
+    return { round, shoe };
+  }
+
+  const activeHand = getActiveBlackjackRoundHand(round);
+  if (!activeHand) {
+    return { round, shoe };
+  }
+
+  const insuranceWager = getBlackjackInsuranceMaxWager(activeHand);
+  const hands = round.hands.map((hand) =>
+    hand.handId === activeHand.handId
+      ? {
+          ...hand,
+          insuranceDecision: "taken" as const,
+          insuranceWager,
+        }
+      : hand,
+  );
+
+  return advanceInsuranceDecision(
+    { ...round, hands },
+    shoe,
+    activeHand.handId,
+  );
+}
+
+export function declineBlackjackInsurance(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+): BlackjackRoundMutationResult {
+  if (round.phase !== "insurance") {
+    return { round, shoe };
+  }
+
+  const activeHand = getActiveBlackjackRoundHand(round);
+  if (!activeHand || activeHand.insuranceDecision !== "pending") {
+    return { round, shoe };
+  }
+
+  const hands = round.hands.map((hand) =>
+    hand.handId === activeHand.handId
+      ? {
+          ...hand,
+          insuranceDecision: "declined" as const,
+          insuranceWager: 0,
+        }
+      : hand,
+  );
+
+  return advanceInsuranceDecision(
+    { ...round, hands },
+    shoe,
+    activeHand.handId,
+  );
 }
 
 function advanceAfterFinishedHand(
@@ -480,6 +674,10 @@ export function splitBlackjackHand(
     cards: secondCards,
     status: splitHandStatus(secondCards, splittingAces),
     doubled: false,
+    insuranceDecision: "notOffered",
+    insuranceWager: 0,
+    insuranceReturnAmount: null,
+    insuranceNetAmount: null,
     result: null,
     returnAmount: null,
     netAmount: null,
@@ -552,6 +750,10 @@ export function startBlackjackRound(
       cards: [],
       status: "playing",
       doubled: false,
+      insuranceDecision: "notOffered",
+      insuranceWager: 0,
+      insuranceReturnAmount: null,
+      insuranceNetAmount: null,
       result: null,
       returnAmount: null,
       netAmount: null,
@@ -589,6 +791,31 @@ export function startBlackjackRound(
     dealerHoleCard,
   ];
   const dealerBlackjack = evaluateBlackjackHand(dealerCards).blackjack;
+  const insuranceOffered = dealerUpcard.rank === "A";
+
+  if (insuranceOffered) {
+    for (const hand of hands) {
+      hand.insuranceDecision = "pending";
+    }
+
+    const firstInsuranceHand = hands[0] ?? null;
+    const insuranceRound: BlackjackRoundState = {
+      phase: "insurance",
+      hands,
+      dealer: {
+        cards: dealerCards,
+        blackjack: dealerBlackjack,
+      },
+      activeHandId: firstInsuranceHand?.handId ?? null,
+      activeSeatId: firstInsuranceHand?.seatId ?? null,
+    };
+
+    return {
+      shoe: nextShoe,
+      round: insuranceRound,
+    };
+  }
+
   const activeHand = dealerBlackjack
     ? null
     : hands.find((hand) => hand.status === "playing") ?? null;
