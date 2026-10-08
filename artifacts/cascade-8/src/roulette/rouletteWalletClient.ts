@@ -87,6 +87,49 @@ function clonePlacements(
   return bets.map((bet) => ({ ...bet }));
 }
 
+function cloneGlobalBet(
+  globalBet: RouletteGlobalBetSnapshot | null,
+) {
+  if (!globalBet) return null;
+
+  return {
+    ...globalBet,
+    bets: clonePlacements(
+      globalBet.bets,
+    ),
+  };
+}
+
+function cloneBootstrap(
+  bootstrap: RouletteBootstrapResponse,
+): RouletteBootstrapResponse {
+  return {
+    ...bootstrap,
+    globalTable:
+      bootstrap.globalTable
+        ? {
+            ...bootstrap.globalTable,
+            result:
+              bootstrap.globalTable.result
+                ? {
+                    ...bootstrap.globalTable.result,
+                  }
+                : null,
+          }
+        : null,
+    recentResults: [
+      ...bootstrap.recentResults,
+    ],
+    globalBet:
+      cloneGlobalBet(
+        bootstrap.globalBet,
+      ),
+    wallet: {
+      ...bootstrap.wallet,
+    },
+  };
+}
+
 async function readResponse<T>(
   response: Response,
 ): Promise<T> {
@@ -130,28 +173,136 @@ async function fetchWithTimeout(
   }
 }
 
+type RouletteBettingContinuity = {
+  bootstrap: RouletteBootstrapResponse;
+  receivedAtClientMs: number;
+};
+
 export class RouletteWalletClient {
+  private bettingContinuity:
+    RouletteBettingContinuity | null = null;
+
+  private rememberBettingBootstrap(
+    bootstrap: RouletteBootstrapResponse,
+  ) {
+    if (
+      !bootstrap.globalTable ||
+      bootstrap.globalTable.phase !== "betting"
+    ) {
+      return;
+    }
+
+    this.bettingContinuity = {
+      bootstrap:
+        cloneBootstrap(
+          bootstrap,
+        ),
+      receivedAtClientMs:
+        Date.now(),
+    };
+  }
+
+  private activeBettingFallback(
+    authoritativeServerNowMs?: number,
+  ): RouletteBootstrapResponse | null {
+    const continuity =
+      this.bettingContinuity;
+    const table =
+      continuity?.bootstrap.globalTable;
+
+    if (!continuity || !table) {
+      return null;
+    }
+
+    const estimatedServerNowMs =
+      Number.isFinite(
+        authoritativeServerNowMs,
+      )
+        ? Number(
+            authoritativeServerNowMs,
+          )
+        : continuity.bootstrap.serverTimeMs +
+          Math.max(
+            0,
+            Date.now() -
+              continuity.receivedAtClientMs,
+          );
+
+    if (
+      !Number.isFinite(
+        estimatedServerNowMs,
+      ) ||
+      estimatedServerNowMs <
+        table.bettingOpenAtMs ||
+      estimatedServerNowMs >=
+        table.bettingCloseAtMs
+    ) {
+      this.bettingContinuity = null;
+      return null;
+    }
+
+    const fallback =
+      cloneBootstrap(
+        continuity.bootstrap,
+      );
+
+    fallback.serverTimeMs =
+      estimatedServerNowMs;
+    fallback.globalTable = {
+      ...table,
+      phase: "betting",
+      serverTimeMs:
+        estimatedServerNowMs,
+    };
+
+    return fallback;
+  }
+
   async bootstrap(): Promise<RouletteBootstrapResponse> {
-    const response = await fetch(
-      `${API_BASE}/state`,
-      {
-        credentials: "same-origin",
-        cache: "no-store",
-      },
-    );
-    const body = await readResponse<{
+    let response: Response;
+
+    try {
+      response = await fetch(
+        `${API_BASE}/state`,
+        {
+          credentials: "same-origin",
+          cache: "no-store",
+        },
+      );
+    } catch (error) {
+      const fallback =
+        this.activeBettingFallback();
+      if (fallback) {
+        return fallback;
+      }
+      throw error;
+    }
+
+    let body: {
       simulationVersion?: unknown;
       serverTimeMs?: unknown;
       globalTable?: RouletteGlobalTableSnapshot | null;
       recentResults?: unknown;
       globalBet?: RouletteGlobalBetSnapshot | null;
       wallet: RouletteWallet;
-    }>(response);
+    };
+
+    try {
+      body = await readResponse(response);
+    } catch (error) {
+      const fallback =
+        this.activeBettingFallback();
+      if (fallback) {
+        return fallback;
+      }
+      throw error;
+    }
+
     const headerVersion = response.headers?.get?.(
       "X-Roulette-Simulation-Version",
     );
 
-    return {
+    const bootstrap: RouletteBootstrapResponse = {
       simulationVersion:
         typeof body.simulationVersion === "string"
           ? body.simulationVersion
@@ -174,6 +325,34 @@ export class RouletteWalletClient {
       globalBet: body.globalBet ?? null,
       wallet: body.wallet,
     };
+
+    if (bootstrap.globalTable) {
+      this.rememberBettingBootstrap(
+        bootstrap,
+      );
+      return bootstrap;
+    }
+
+    const fallback =
+      this.activeBettingFallback(
+        bootstrap.serverTimeMs,
+      );
+
+    if (
+      fallback &&
+      fallback.simulationVersion ===
+        bootstrap.simulationVersion
+    ) {
+      return {
+        ...bootstrap,
+        serverTimeMs:
+          fallback.serverTimeMs,
+        globalTable:
+          fallback.globalTable,
+      };
+    }
+
+    return bootstrap;
   }
 
   async updateGlobalBet(
