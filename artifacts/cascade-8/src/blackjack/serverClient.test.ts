@@ -3,7 +3,6 @@ import {
   BlackjackServerClient,
   BlackjackStaleActionError,
   type BlackjackServerTransport,
-  type BlackjackSnapshotBus,
 } from "./serverClient";
 import { BlackjackServerApiError } from "./serverApi";
 import type {
@@ -35,20 +34,6 @@ function transport(overrides: Partial<BlackjackServerTransport> = {}): Blackjack
     sendAction: async (request) => snapshot(request.expectedRevision + 1),
     createIdempotencyKey: () => `blackjack-test-key-${++key}`,
     ...overrides,
-  };
-}
-
-function bus(): BlackjackSnapshotBus & { emit(snapshot: BlackjackServerSnapshot): void } {
-  const listeners = new Set<(value: BlackjackServerSnapshot) => void>();
-  return {
-    publish() {},
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    emit(value) {
-      for (const listener of listeners) listener(value);
-    },
   };
 }
 
@@ -123,22 +108,29 @@ describe("BlackjackServerClient", () => {
     expect(client.getSnapshot()?.revision).toBe(3);
   });
 
-  it("accepts newer cross-tab snapshots, rejects older revisions, and refreshes wallet on same revision", async () => {
-    const snapshotBus = bus();
-    const client = new BlackjackServerClient(
-      transport({ fetchState: async () => snapshot(5, 500, 90_000) }),
-      snapshotBus,
-    );
+  it("uses authoritative GET resync for multi-tab changes and same-revision shared-wallet changes", async () => {
+    const states = [
+      snapshot(5, 500, 90_000),
+      snapshot(4, 900, 10_000),
+      snapshot(5, 600, 88_000),
+      snapshot(6, 700, 86_000),
+    ];
+    let index = 0;
+    const client = new BlackjackServerClient(transport({
+      fetchState: async () => states[Math.min(index++, states.length - 1)]!,
+    }));
 
     await client.connect();
-    snapshotBus.emit(snapshot(4, 900, 10_000));
+    await client.refresh();
     expect(client.getSnapshot()?.revision).toBe(5);
     expect(client.getSnapshot()?.wallet.balanceCents).toBe(90_000);
 
-    snapshotBus.emit(snapshot(5, 600, 88_000));
+    await client.refresh();
+    expect(client.getSnapshot()?.revision).toBe(5);
     expect(client.getSnapshot()?.wallet.balanceCents).toBe(88_000);
 
-    snapshotBus.emit(snapshot(6, 700, 86_000));
+    await client.refresh();
     expect(client.getSnapshot()?.revision).toBe(6);
+    expect(client.getSnapshot()?.wallet.balanceCents).toBe(86_000);
   });
 });
