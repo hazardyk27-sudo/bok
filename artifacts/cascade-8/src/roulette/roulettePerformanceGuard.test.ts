@@ -83,16 +83,36 @@ describe("roulette performance architecture guard", () => {
     );
   });
 
-  it("keeps drag pickup and snap feedback well below the 500ms interaction target", () => {
-    expect(dragSource).toContain(
-      "const HOLD_MS = 120;",
-    );
+  it("keeps drag pickup movement-only and snap feedback well below the 500ms interaction target", () => {
+    expect(dragSource).not.toContain("HOLD_MS");
     expect(dragSource).toContain(
       "const EARLY_DRAG_MS = 20;",
     );
     expect(dragSource).toContain(
+      "const EARLY_DRAG_DISTANCE_PX = 3;",
+    );
+    expect(dragSource).toContain(
       "const SNAP_MS = 45;",
     );
+
+    const startDragIndex =
+      dragSource.indexOf("const startDrag = () =>");
+    const pointerCaptureIndex =
+      dragSource.indexOf(
+        "panel.setPointerCapture(current.pointerId);",
+      );
+    const pointerDownIndex =
+      dragSource.indexOf(
+        'panel.addEventListener("pointerdown"',
+      );
+
+    expect(startDragIndex).toBeGreaterThanOrEqual(0);
+    expect(pointerCaptureIndex).toBeGreaterThan(startDragIndex);
+    expect(pointerCaptureIndex).toBeLessThan(pointerDownIndex);
+    expect(dragSource).not.toContain(
+      "panel.setPointerCapture(event.pointerId);",
+    );
+
     expect(dragSource).toContain(
       "setRouletteBetAuthority(",
     );
