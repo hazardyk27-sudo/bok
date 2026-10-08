@@ -7,7 +7,6 @@ import {
 } from "./betAuthority";
 import {
   getRouletteBetAuthoritySnapshot,
-  setRouletteBetAuthority,
 } from "./betAuthorityVisual";
 import {
   registerRouletteExternalLatestMutation,
@@ -129,16 +128,10 @@ export function installRouletteFastDouble(
       const idempotencyKey =
         `roulette_fast_double_${crypto.randomUUID().replaceAll("-", "")}`;
 
-      // Claim authority before the runtime bubble handler executes. The runtime
-      // still performs its normal optimistic reducer/render, but the matching
-      // network call is deduplicated onto this exact server-stamped request.
-      setRouletteBetAuthority(
-        authority.roundId,
-        plan,
-        authority.revision,
-        true,
-      );
-
+      // Start the server-stamped request at capture time, but do not mutate
+      // local authority yet. The runtime bubble handler must still apply x2
+      // exactly once from the pre-click topology. Its matching network call is
+      // then deduplicated onto this request.
       const request = fetch(
         FAST_DOUBLE_ENDPOINT,
         {
