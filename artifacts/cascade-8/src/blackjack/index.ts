@@ -33,7 +33,11 @@ import {
   type BlackjackSeatId,
   type BlackjackSeatState,
 } from "./seatState";
-import { createBlackjackShoe, type BlackjackShoe } from "./shoe";
+import {
+  createBlackjackShoe,
+  reshuffleBlackjackShoeAtRoundBoundary,
+  type BlackjackShoe,
+} from "./shoe";
 
 const TABLE_MIN = 10;
 
@@ -406,7 +410,9 @@ function renderBlackjack(
           <strong>${round ? (round.phase === "complete" ? (round.dealer.blackjack ? "DEALER BLACKJACK" : "ROUND COMPLETE") : round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER TURN") : "PLACE YOUR BETS"}</strong>
           <small>${round ? renderRoundStatusCopy(round) : renderBettingStatusCopy(state, selectedChip)}</small>
           ${round
-            ? ""
+            ? round.phase === "complete"
+              ? `<button class="bj-deal-round" type="button" data-round-action="next">NEXT ROUND</button>`
+              : ""
             : `<button class="bj-deal-round" type="button" data-round-action="deal" ${readiness.canDeal ? "" : "disabled"}>DEAL${readiness.participatingSeatIds.length > 0 ? ` · ${readiness.participatingSeatIds.length} HAND${readiness.participatingSeatIds.length === 1 ? "" : "S"}` : ""}</button>`}
         </aside>
 
@@ -557,6 +563,14 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = standBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          break;
+        }
+        case "next": {
+          if (!round || round.phase !== "complete") {
+            return;
+          }
+          shoe = reshuffleBlackjackShoeAtRoundBoundary(shoe);
+          round = null;
           break;
         }
         default:
