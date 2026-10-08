@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  addSeatChip,
   createInitialSeatState,
   getOccupiedSeats,
   getTotalSeatBet,
   leaveSeat,
   selectSeat,
-  setSeatBet,
   sitAtSeat,
 } from "./seatState";
 
@@ -26,6 +26,7 @@ describe("blackjack seat state", () => {
     expect(state.seats.find((seat) => seat.id === 2)).toMatchObject({
       status: "seated",
       bet: 0,
+      chips: [],
     });
   });
 
@@ -34,15 +35,37 @@ describe("blackjack seat state", () => {
 
     expect(state.selectedSeatId).toBe(5);
     expect(state.seats.find((seat) => seat.id === 5)?.bet).toBe(125);
+    expect(state.seats.find((seat) => seat.id === 5)?.chips).toEqual([100, 25]);
   });
 
-  it("marks a seated seat bet-ready only when it reaches table minimum", () => {
-    const seated = sitAtSeat(createInitialSeatState(), 2);
-    const belowMinimum = setSeatBet(seated, 2, 5, 10);
-    const ready = setSeatBet(belowMinimum, 2, 10, 10);
+  it("adds selected chip denominations and becomes ready at table minimum", () => {
+    let state = sitAtSeat(createInitialSeatState(), 2);
+    state = addSeatChip(state, 2, 5, 10);
 
-    expect(belowMinimum.seats.find((seat) => seat.id === 2)?.status).toBe("seated");
-    expect(ready.seats.find((seat) => seat.id === 2)?.status).toBe("betReady");
+    expect(state.seats.find((seat) => seat.id === 2)).toMatchObject({
+      status: "seated",
+      bet: 5,
+      chips: [5],
+    });
+
+    state = addSeatChip(state, 2, 5, 10);
+
+    expect(state.seats.find((seat) => seat.id === 2)).toMatchObject({
+      status: "betReady",
+      bet: 10,
+      chips: [5, 5],
+    });
+  });
+
+  it("keeps each seat's chip history independent", () => {
+    let state = sitAtSeat(createInitialSeatState(), 2);
+    state = addSeatChip(state, 2, 25, 10);
+    state = selectSeat(state, 5);
+    state = addSeatChip(state, 5, 500, 10);
+
+    expect(state.seats.find((seat) => seat.id === 2)?.chips).toEqual([25]);
+    expect(state.seats.find((seat) => seat.id === 5)?.chips).toEqual([100, 25, 500]);
+    expect(getTotalSeatBet(state)).toBe(800);
   });
 
   it("leaves a seat, clears its wager, and selects another occupied seat", () => {
@@ -51,6 +74,7 @@ describe("blackjack seat state", () => {
     expect(state.seats.find((seat) => seat.id === 3)).toMatchObject({
       status: "empty",
       bet: 0,
+      chips: [],
     });
     expect(state.selectedSeatId).toBe(1);
     expect(getTotalSeatBet(state)).toBe(175);
