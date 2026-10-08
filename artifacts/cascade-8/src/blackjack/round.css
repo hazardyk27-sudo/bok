@@ -118,9 +118,54 @@
 }
 
 .bj-round-action--double:not(:disabled),
-.bj-round-action--split:not(:disabled) {
+.bj-round-action--split:not(:disabled),
+.bj-round-action--insurance:not(:disabled) {
   border-color: rgba(243, 200, 110, 0.92);
   box-shadow: inset 0 0 0 1px rgba(243, 200, 110, 0.12), 0 0 18px rgba(243, 200, 110, 0.2);
+}
+
+.bj-console__round-actions.is-insurance-phase {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bj-round-action--insurance:not(:disabled) {
+  color: #f7d992;
+  background: linear-gradient(180deg, rgba(112, 75, 23, 0.46), rgba(63, 40, 12, 0.46));
+}
+
+.bj-hand-insurance {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 43px;
+  transform: translateX(-50%);
+  max-width: 155px;
+  padding: 3px 7px;
+  overflow: hidden;
+  border: 1px solid rgba(243, 200, 110, 0.52);
+  border-radius: 10px;
+  color: #f4d68f;
+  background: rgba(24, 17, 6, 0.78);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-result-win .bj-hand-insurance {
+  border-color: rgba(36, 239, 146, 0.55);
+}
+
+.is-result-lose .bj-hand-insurance {
+  border-color: rgba(240, 68, 68, 0.45);
+}
+
+.bj-split-hand .bj-hand-insurance {
+  bottom: 31px;
+  max-width: 86px;
+  padding: 2px 4px;
+  font-size: 5.5px;
 }
 
 .bj-seat--split {
@@ -330,6 +375,23 @@
     margin-top: 3px;
     padding: 3px 8px;
     font-size: 8px;
+  }
+
+  .bj-console__round-actions.is-insurance-phase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bj-hand-insurance {
+    bottom: 34px;
+    max-width: 105px;
+    padding: 2px 5px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand .bj-hand-insurance {
+    bottom: 23px;
+    max-width: 58px;
+    font-size: 4.5px;
   }
 
   .bj-seat--split,
