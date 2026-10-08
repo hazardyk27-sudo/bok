@@ -21,13 +21,105 @@
 
 @media (max-width: 900px) and (orientation: portrait) {
   .bj-live-authority {
-    min-height: 12px;
-    margin-top: -4px;
-    font-size: 7px;
-    letter-spacing: 0.11em;
+    min-height: 11px;
+    margin-top: 1px;
+    font-size: 6px;
+    line-height: 1;
+    letter-spacing: 0.1em;
   }
 
   .bj-root[data-live-authority="server"] .bj-hud--status small {
     max-width: 28ch;
+  }
+
+  /* Mobile console is contextual: betting tools before DEAL, round actions after DEAL.
+     This removes the old three-row control wall without duplicating game state. */
+  .bj-root[data-live-authority="server"] .bj-console {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0;
+    padding: 6px 7px 5px;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console__chips {
+    min-height: 48px;
+    padding: 1px 0 5px;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console__bet-actions {
+    min-height: 54px;
+    padding: 5px 0 2px;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console__round-actions {
+    display: none;
+    min-height: 58px;
+    padding: 3px 0 1px;
+    border-top: 0;
+  }
+
+  /* Once betting is locked (round/pending/connect), collapse betting controls and
+     expose only the action row. */
+  .bj-root[data-live-authority="server"] .bj-console:has(.bj-console-chip:disabled) .bj-console__chips,
+  .bj-root[data-live-authority="server"] .bj-console:has(.bj-console-chip:disabled) .bj-console__bet-actions {
+    display: none;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console:has(.bj-console-chip:disabled) .bj-console__round-actions {
+    display: flex;
+  }
+
+  /* Free the lower third for the table instead of reserving space for all controls. */
+  .bj-root[data-live-authority="server"] .bj-mobile-seat-tabs {
+    bottom: clamp(122px, 16.5vh, 148px);
+  }
+
+  .bj-root[data-live-authority="server"] .bj-table-shell {
+    bottom: 22.5%;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console-chip:disabled {
+    opacity: 0.3;
+    filter: grayscale(0.75);
+  }
+
+  /* When PLACE BET is unavailable, make the selected denomination visibly locked
+     and show the normally hidden amount/seat hint. */
+  .bj-root[data-live-authority="server"] .bj-console:has(.bj-action--place:disabled) .bj-console-chip.is-selected {
+    opacity: 0.5;
+    filter: grayscale(0.55);
+    box-shadow: 0 0 0 2px rgba(231, 119, 87, 0.42);
+  }
+
+  .bj-root[data-live-authority="server"] .bj-action--place:disabled small {
+    display: block;
+    margin-top: 1px;
+    color: rgba(246, 183, 151, 0.88);
+    font-size: clamp(6px, 1.75vw, 8px);
+    line-height: 1;
+    text-align: center;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-action--place:disabled {
+    border-color: rgba(231, 119, 87, 0.26);
+  }
+
+  .bj-root[data-live-authority="server"] .bj-action,
+  .bj-root[data-live-authority="server"] .bj-round-action {
+    min-height: 48px;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-chip-arrow {
+    display: none;
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console__chips {
+    gap: clamp(5px, 2vw, 10px);
+  }
+
+  .bj-root[data-live-authority="server"] .bj-console-chip {
+    flex-basis: clamp(42px, 13vw, 54px);
   }
 }
