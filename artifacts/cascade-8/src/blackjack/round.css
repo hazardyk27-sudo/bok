@@ -127,6 +127,10 @@
   width: clamp(210px, 16vw, 270px);
 }
 
+.bj-seat--split-many {
+  width: clamp(250px, 20vw, 330px);
+}
+
 .bj-split-hands {
   position: absolute;
   z-index: 12;
@@ -134,6 +138,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
+}
+
+.bj-seat--split-many .bj-split-hands {
+  inset: -24px -54px 44px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 5px;
 }
 
 .bj-split-hand {
@@ -170,6 +181,12 @@
   border-color: rgba(219, 185, 112, 0.62);
 }
 
+.bj-split-hand.is-ace-split,
+.bj-seat--split.is-ace-split .bj-seat__round-badge {
+  border-color: rgba(243, 200, 110, 0.86);
+  box-shadow: 0 0 18px rgba(243, 200, 110, 0.18);
+}
+
 .bj-split-hand__label {
   position: absolute;
   z-index: 10;
@@ -198,6 +215,18 @@
   top: 27%;
   transform: translateX(-50%) scale(0.78);
   transform-origin: top center;
+}
+
+.bj-seat--split-many .bj-split-hand .bj-seat__total {
+  top: 1px;
+  min-width: 28px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.bj-seat--split-many .bj-split-hand .bj-seat__cards {
+  top: 24%;
+  transform: translateX(-50%) scale(0.52);
 }
 
 .bj-split-hand__bet {
@@ -230,8 +259,24 @@
   white-space: nowrap;
 }
 
+.bj-seat--split-many .bj-split-hand__bet {
+  bottom: 15px;
+  padding: 2px 5px;
+  font-size: 7px;
+}
+
+.bj-seat--split-many .bj-split-hand__status {
+  bottom: 2px;
+  font-size: 5.5px;
+}
+
 .bj-split-hand.is-active-subhand .bj-split-hand__status {
   color: #45f4a4;
+}
+
+.bj-split-hand.is-ace-split .bj-split-hand__status,
+.bj-seat--split.is-ace-split .bj-seat__round-badge small {
+  color: #f3d58e;
 }
 
 .bj-seat__round-badge--split {
@@ -287,13 +332,19 @@
     font-size: 8px;
   }
 
-  .bj-seat--split {
+  .bj-seat--split,
+  .bj-seat--split-many {
     width: 150px;
   }
 
   .bj-split-hands {
     inset: -4px -14px 38px;
     gap: 3px;
+  }
+
+  .bj-seat--split-many .bj-split-hands {
+    inset: -12px -18px 36px;
+    gap: 2px;
   }
 
   .bj-split-hand {
@@ -306,10 +357,11 @@
     font-size: 6px;
   }
 
-  .bj-split-hand .bj-seat__total {
-    min-width: 27px;
-    height: 23px;
-    font-size: 10px;
+  .bj-split-hand .bj-seat__total,
+  .bj-seat--split-many .bj-split-hand .bj-seat__total {
+    min-width: 24px;
+    height: 20px;
+    font-size: 8px;
   }
 
   .bj-split-hand .bj-seat__cards {
@@ -317,15 +369,22 @@
     transform: translateX(-50%) scale(0.58);
   }
 
-  .bj-split-hand__bet {
-    bottom: 16px;
-    padding: 2px 5px;
-    font-size: 7px;
+  .bj-seat--split-many .bj-split-hand .bj-seat__cards {
+    top: 23%;
+    transform: translateX(-50%) scale(0.39);
   }
 
-  .bj-split-hand__status {
-    bottom: 3px;
-    font-size: 5.5px;
+  .bj-split-hand__bet,
+  .bj-seat--split-many .bj-split-hand__bet {
+    bottom: 13px;
+    padding: 2px 4px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand__status,
+  .bj-seat--split-many .bj-split-hand__status {
+    bottom: 2px;
+    font-size: 5px;
   }
 
   .bj-seat--sitting-out .bj-seat__bet-circle {
