@@ -50,7 +50,7 @@ export function sitAtSeat(
     selectedSeatId: seatId,
     seats: state.seats.map((candidate) =>
       candidate.id === seatId
-        ? { ...candidate, status: "seated", bet: 0 }
+        ? { ...candidate, status: "seated" as const, bet: 0 }
         : candidate,
     ),
   };
@@ -118,10 +118,13 @@ export function setSeatBet(
         return candidate;
       }
 
+      const status: BlackjackSeatStatus =
+        normalizedBet >= tableMin ? "betReady" : "seated";
+
       return {
         ...candidate,
         bet: normalizedBet,
-        status: normalizedBet >= tableMin ? "betReady" : "seated",
+        status,
       };
     }),
   };
