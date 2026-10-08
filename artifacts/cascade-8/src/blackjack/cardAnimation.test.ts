@@ -130,6 +130,36 @@ describe("buildBlackjackCardAnimationPlan", () => {
     ]);
   });
 
+  it("shows a finishing player draw before dealer reveal and dealer draws", () => {
+    const first = card("p1", "10");
+    const second = card("p2", "5");
+    const finishing = card("p3", "6");
+    const dealerUp = card("d1", "6");
+    const dealerHole = card("d2", "5");
+    const dealerDraw = card("d3", "10");
+    const previous = round(
+      [hand("1:0", 1, [first, second])],
+      [dealerUp, dealerHole],
+      "playerTurns",
+    );
+    const finishedHand = {
+      ...hand("1:0", 1, [first, second, finishing]),
+      status: "stood" as const,
+    };
+    const next = round(
+      [finishedHand],
+      [dealerUp, dealerHole, dealerDraw],
+      "complete",
+    );
+
+    const plan = buildBlackjackCardAnimationPlan(previous, next, "hit");
+    expect(plan.steps.map((step) => [step.cardId, step.kind])).toEqual([
+      ["p3", "playerDraw"],
+      ["d2", "holeReveal"],
+      ["d3", "dealerDraw"],
+    ]);
+  });
+
   it("does not animate persisted cards on a no-card action", () => {
     const existing = round(
       [hand("1:0", 1, [card("p1"), card("p2")])],
