@@ -3,6 +3,12 @@ import "./mobile.css";
 import "./seatState.css";
 import "./betting.css";
 import "./round.css";
+import "./cardAnimation.css";
+import {
+  animateBlackjackCardPlan,
+  buildBlackjackCardAnimationPlan,
+  type BlackjackCardAnimationAction,
+} from "./cardAnimation";
 import {
   evaluateBlackjackHand,
   type BlackjackCard,
@@ -69,14 +75,14 @@ const SUIT_SYMBOL: Record<BlackjackSuit, string> = {
 
 function renderCard(card: BlackjackCard, hidden = false) {
   if (hidden) {
-    return `<div class="bj-card bj-card--back" aria-label="Dealer hole card"></div>`;
+    return `<div class="bj-card bj-card--back" data-card-id="${card.id}" data-card-hidden="true" aria-label="Dealer hole card"></div>`;
   }
 
   const suit = SUIT_SYMBOL[card.suit];
   const red = card.suit === "diamonds" || card.suit === "hearts";
 
   return `
-    <div class="bj-card${red ? " bj-card--red" : ""}" aria-label="${card.rank}${suit}">
+    <div class="bj-card${red ? " bj-card--red" : ""}" data-card-id="${card.id}" aria-label="${card.rank}${suit}">
       <span class="bj-card__rank">${card.rank}</span>
       <span class="bj-card__suit">${suit}</span>
       <span class="bj-card__pip">${suit}</span>
@@ -521,7 +527,7 @@ function renderBlackjack(
     : "SPLIT";
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="9">
+    <main class="bj-root" data-blackjack-part="12a">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -674,7 +680,20 @@ export function mountBlackjack(app: HTMLDivElement) {
   let shoe: BlackjackShoe = createBlackjackShoe();
   let round: BlackjackRoundState | null = null;
 
-  const rerender = () => renderBlackjack(app, state, selectedChip, round);
+  const rerender = (
+    previousRound: BlackjackRoundState | null = round,
+    animationAction: BlackjackCardAnimationAction | null = null,
+  ) => {
+    renderBlackjack(app, state, selectedChip, round);
+    if (!animationAction) return;
+
+    const plan = buildBlackjackCardAnimationPlan(previousRound, round, animationAction);
+    if (plan.steps.length === 0) return;
+
+    window.requestAnimationFrame(() => {
+      animateBlackjackCardPlan(app, plan);
+    });
+  };
 
   app.addEventListener("click", (event) => {
     const target = event.target;
@@ -684,6 +703,9 @@ export function mountBlackjack(app: HTMLDivElement) {
 
     const roundAction = target.closest<HTMLElement>("[data-round-action]");
     if (roundAction) {
+      const previousRound = round;
+      let animationAction: BlackjackCardAnimationAction;
+
       switch (roundAction.dataset.roundAction) {
         case "deal": {
           if (round !== null) {
@@ -692,6 +714,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = startBlackjackRound(state, shoe, TABLE_MIN);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "deal";
           break;
         }
         case "insuranceTake": {
@@ -701,6 +724,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = takeBlackjackInsurance(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "insurance";
           break;
         }
         case "insuranceDecline": {
@@ -710,6 +734,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = declineBlackjackInsurance(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "declineInsurance";
           break;
         }
         case "hit": {
@@ -719,6 +744,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = hitBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "hit";
           break;
         }
         case "stand": {
@@ -728,6 +754,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = standBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "stand";
           break;
         }
         case "doubleDown": {
@@ -737,6 +764,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = doubleBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "double";
           break;
         }
         case "split": {
@@ -746,6 +774,7 @@ export function mountBlackjack(app: HTMLDivElement) {
           const result = splitBlackjackHand(round, shoe);
           round = result.round;
           shoe = result.shoe;
+          animationAction = "split";
           break;
         }
         case "next": {
@@ -754,13 +783,14 @@ export function mountBlackjack(app: HTMLDivElement) {
           }
           shoe = reshuffleBlackjackShoeAtRoundBoundary(shoe);
           round = null;
+          animationAction = "next";
           break;
         }
         default:
           return;
       }
 
-      rerender();
+      rerender(previousRound, animationAction);
       return;
     }
 
