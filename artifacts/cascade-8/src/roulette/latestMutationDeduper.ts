@@ -3,6 +3,10 @@ import {
   type RouletteBetPlacement,
 } from "./betState";
 import {
+  getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
+} from "./betAuthorityVisual";
+import {
   RouletteWalletClient,
   type RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
@@ -106,6 +110,19 @@ export function installRouletteLatestMutationDeduper() {
       );
 
     if (sharedLatest) {
+      // The runtime reducer has now applied the mutation exactly once. Mark that
+      // same topology optimistic at the moment its normal write is deduplicated,
+      // rather than mutating authority in the capture handler beforehand.
+      const authority =
+        getRouletteBetAuthoritySnapshot();
+      setRouletteBetAuthority(
+        roundId,
+        bets,
+        authority.roundId === roundId
+          ? authority.revision
+          : expectedRevision,
+        true,
+      );
       return sharedLatest;
     }
 
