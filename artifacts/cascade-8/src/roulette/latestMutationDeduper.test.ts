@@ -8,13 +8,20 @@ import {
   clearRouletteExternalLatestMutationForTests,
   consumeMatchingRouletteExternalLatestMutation,
   registerRouletteExternalLatestMutation,
+  releaseRouletteFailedExternalLatestMutation,
 } from "./latestMutationDeduper";
+import {
+  clearRouletteBetAuthority,
+  getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
+} from "./betAuthorityVisual";
 import type {
   RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
 
 afterEach(() => {
   clearRouletteExternalLatestMutationForTests();
+  clearRouletteBetAuthority();
 });
 
 function response(
@@ -126,5 +133,70 @@ describe("roulette latest mutation deduper", () => {
         }],
       ),
     ).toBe(shared);
+  });
+
+  it("releases optimistic authority when the matching fast request fails", () => {
+    setRouletteBetAuthority(
+      "round-1",
+      [{
+        betId: "straight-25",
+        amount: 20,
+      }],
+      7,
+      true,
+    );
+
+    expect(
+      releaseRouletteFailedExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBe(true);
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toEqual({
+      roundId: "round-1",
+      bets: [{
+        betId: "straight-25",
+        amount: 20,
+      }],
+      revision: 7,
+      optimistic: false,
+    });
+  });
+
+  it("does not release a newer different optimistic mutation after an older fast failure", () => {
+    setRouletteBetAuthority(
+      "round-1",
+      [{
+        betId: "straight-26",
+        amount: 30,
+      }],
+      7,
+      true,
+    );
+
+    expect(
+      releaseRouletteFailedExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBe(false);
+    expect(
+      getRouletteBetAuthoritySnapshot(),
+    ).toMatchObject({
+      roundId: "round-1",
+      bets: [{
+        betId: "straight-26",
+        amount: 30,
+      }],
+      optimistic: true,
+    });
   });
 });
