@@ -27,11 +27,30 @@ function chipsForDemoSeat(id: BlackjackSeatId): BlackjackChipValue[] {
   return [];
 }
 
+function sumChips(chips: BlackjackChipValue[]): number {
+  return chips.reduce((total, chip) => total + chip, 0);
+}
+
+function statusForBet(bet: number, tableMin: number): Exclude<BlackjackSeatStatus, "empty"> {
+  return bet >= tableMin ? "betReady" : "seated";
+}
+
+function replaceSeat(
+  state: BlackjackSeatState,
+  seatId: BlackjackSeatId,
+  updater: (seat: BlackjackSeat) => BlackjackSeat,
+): BlackjackSeatState {
+  return {
+    ...state,
+    seats: state.seats.map((seat) => (seat.id === seatId ? updater(seat) : seat)),
+  };
+}
+
 export function createInitialSeatState(): BlackjackSeatState {
   return {
     seats: SEAT_IDS.map((id) => {
       const chips = chipsForDemoSeat(id);
-      const bet = chips.reduce((total, chip) => total + chip, 0);
+      const bet = sumChips(chips);
 
       return {
         id,
@@ -128,21 +147,73 @@ export function addSeatChip(
   }
 
   const chips = [...seat.chips, chip];
-  const nextBet = chips.reduce((total, value) => total + value, 0);
+  const bet = sumChips(chips);
 
-  return {
-    ...state,
-    seats: state.seats.map((candidate) =>
-      candidate.id === seatId
-        ? {
-            ...candidate,
-            bet: nextBet,
-            chips,
-            status: nextBet >= tableMin ? "betReady" : "seated",
-          }
-        : candidate,
-    ),
-  };
+  return replaceSeat(state, seatId, (candidate) => ({
+    ...candidate,
+    bet,
+    chips,
+    status: statusForBet(bet, tableMin),
+  }));
+}
+
+export function undoSeatChip(
+  state: BlackjackSeatState,
+  seatId: BlackjackSeatId,
+  tableMin: number,
+): BlackjackSeatState {
+  const seat = getSeat(state, seatId);
+  if (seat.status === "empty" || seat.chips.length === 0) {
+    return state;
+  }
+
+  const chips = seat.chips.slice(0, -1);
+  const bet = sumChips(chips);
+
+  return replaceSeat(state, seatId, (candidate) => ({
+    ...candidate,
+    bet,
+    chips,
+    status: statusForBet(bet, tableMin),
+  }));
+}
+
+export function clearSeatBet(
+  state: BlackjackSeatState,
+  seatId: BlackjackSeatId,
+): BlackjackSeatState {
+  const seat = getSeat(state, seatId);
+  if (seat.status === "empty" || seat.chips.length === 0) {
+    return state;
+  }
+
+  return replaceSeat(state, seatId, (candidate) => ({
+    ...candidate,
+    bet: 0,
+    chips: [],
+    status: "seated",
+  }));
+}
+
+export function doubleSeatBet(
+  state: BlackjackSeatState,
+  seatId: BlackjackSeatId,
+  tableMin: number,
+): BlackjackSeatState {
+  const seat = getSeat(state, seatId);
+  if (seat.status === "empty" || seat.chips.length === 0) {
+    return state;
+  }
+
+  const chips = [...seat.chips, ...seat.chips];
+  const bet = sumChips(chips);
+
+  return replaceSeat(state, seatId, (candidate) => ({
+    ...candidate,
+    bet,
+    chips,
+    status: statusForBet(bet, tableMin),
+  }));
 }
 
 export function isBlackjackChipValue(value: number): value is BlackjackChipValue {
