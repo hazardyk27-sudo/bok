@@ -52,8 +52,12 @@ export function syncRouletteCanonicalChipFace(
     amountValue =
       document.createElement("span");
     amountValue.className =
-      "roulette-placed-chip__value";
+      "roulette-placed-chip__value roulette-chip-face-value";
     chip.prepend(amountValue);
+  } else {
+    amountValue.classList.add(
+      "roulette-chip-face-value",
+    );
   }
   if (
     amountValue.textContent !==
@@ -72,8 +76,12 @@ export function syncRouletteCanonicalChipFace(
       amountSuffix =
         document.createElement("span");
       amountSuffix.className =
-        "roulette-placed-chip__suffix";
+        "roulette-placed-chip__suffix roulette-chip-face-value";
       chip.append(amountSuffix);
+    } else {
+      amountSuffix.classList.add(
+        "roulette-chip-face-value",
+      );
     }
     if (
       amountSuffix.textContent !==
