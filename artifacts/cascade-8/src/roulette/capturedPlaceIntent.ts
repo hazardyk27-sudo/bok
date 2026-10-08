@@ -26,13 +26,23 @@ export function registerRouletteCapturedPlaceIntent(
     plan: cloneBets(plan),
   };
 
-  // A captured intent belongs only to the current DOM event task. If the
-  // runtime bubble handler does not consume it, never let a later click reuse it.
-  queueMicrotask(() => {
+  // The runtime bubble handler must consume this in the same DOM event task.
+  // Keep a macrotask safety cleanup so an interrupted event can never leak into
+  // a later click, while still allowing capture code to verify consumption in a
+  // microtask after bubbling has finished.
+  window.setTimeout(() => {
     if (pending?.token === token) {
       pending = null;
     }
-  });
+  }, 0);
+
+  return token;
+}
+
+export function isRouletteCapturedPlaceIntentPending(
+  token: number,
+) {
+  return pending?.token === token;
 }
 
 export function consumeRouletteCapturedPlaceIntent(
