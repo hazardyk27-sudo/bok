@@ -43,17 +43,23 @@ const PAYOUT_GAP_MS = 90;
 const MAX_DENOMINATION_FLIGHTS = 12;
 
 function planDuration(steps: readonly BlackjackChipAnimationStep[]): number {
-  if (steps.length === 0) return 0;
-  return Math.max(...steps.map((step) => step.delayMs + CHIP_FLIGHT_MS));
+  return steps.length === 0
+    ? 0
+    : Math.max(...steps.map((step) => step.delayMs + CHIP_FLIGHT_MS));
 }
 
 function seatById(state: BlackjackSeatState, seatId: BlackjackSeatId) {
   return state.seats.find((seat) => seat.id === seatId) ?? null;
 }
 
-function visualChipValues(values: readonly BlackjackChipValue[]): BlackjackChipValue[] {
+function cappedValues(
+  values: readonly BlackjackChipValue[],
+  keepFront: boolean,
+): BlackjackChipValue[] {
   if (values.length <= MAX_DENOMINATION_FLIGHTS) return [...values];
-  return values.slice(values.length - MAX_DENOMINATION_FLIGHTS);
+  return keepFront
+    ? values.slice(0, MAX_DENOMINATION_FLIGHTS)
+    : values.slice(values.length - MAX_DENOMINATION_FLIGHTS);
 }
 
 export function buildBlackjackBetChipAnimationPlan(
@@ -66,17 +72,14 @@ export function buildBlackjackBetChipAnimationPlan(
   const after = seatById(next, seatId);
   if (!before || !after) return { steps: [], totalDurationMs: 0 };
 
-  let values: BlackjackChipValue[] = [];
-  let kind: BlackjackChipAnimationKind = "betIn";
+  const outbound = action === "undo" || action === "clear";
+  const rawValues = outbound
+    ? before.chips.slice(after.chips.length).reverse()
+    : after.chips.slice(before.chips.length);
+  const values = cappedValues(rawValues, outbound);
+  const kind: BlackjackChipAnimationKind = outbound ? "betOut" : "betIn";
 
-  if (action === "place" || action === "x2") {
-    values = after.chips.slice(before.chips.length);
-  } else {
-    kind = "betOut";
-    values = before.chips.slice(after.chips.length).reverse();
-  }
-
-  const steps = visualChipValues(values).map((chipValue, order) => ({
+  const steps = values.map((chipValue, order) => ({
     kind,
     seatId,
     handId: null,
@@ -131,19 +134,7 @@ export function buildBlackjackRoundChipAnimationPlan(
   const steps: BlackjackChipAnimationStep[] = [];
   const previousActive = activeHand(previous);
 
-  if (previousActive && action === "double") {
-    steps.push({
-      kind: "roundStake",
-      seatId: previousActive.seatId,
-      handId: previousActive.handId,
-      amount: previousActive.wager,
-      chipValue: null,
-      order: 0,
-      delayMs: 0,
-    });
-  }
-
-  if (previousActive && action === "split") {
+  if (previousActive && (action === "double" || action === "split")) {
     steps.push({
       kind: "roundStake",
       seatId: previousActive.seatId,
@@ -195,9 +186,18 @@ function center(rect: DOMRect) {
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
-function targetForSeat(root: HTMLElement, seatId: BlackjackSeatId, handId: string | null) {
+function elementForHand(root: HTMLElement, handId: string) {
+  return [...root.querySelectorAll<HTMLElement>("[data-hand-id]")]
+    .find((element) => element.dataset.handId === handId) ?? null;
+}
+
+function targetForSeat(
+  root: HTMLElement,
+  seatId: BlackjackSeatId,
+  handId: string | null,
+) {
   if (handId) {
-    const hand = root.querySelector<HTMLElement>(`[data-hand-id="${CSS.escape(handId)}"]`);
+    const hand = elementForHand(root, handId);
     if (hand) return hand;
   }
   return root.querySelector<HTMLElement>(`.bj-seat[data-seat="${seatId}"] .bj-seat__bet-circle`)
@@ -222,10 +222,7 @@ function denominationSource(root: HTMLElement, chipValue: BlackjackChipValue | n
   return genericStakeSource(root);
 }
 
-function createGhost(
-  root: HTMLElement,
-  step: BlackjackChipAnimationStep,
-): HTMLElement {
+function createGhost(root: HTMLElement, step: BlackjackChipAnimationStep): HTMLElement {
   const ghost = document.createElement("div");
   const variant = step.chipValue === null ? "amount" : String(step.chipValue);
   ghost.className = `bj-chip-flight bj-chip-flight--${variant} bj-chip-flight--${step.kind}`;
@@ -237,6 +234,10 @@ function createGhost(
   return ghost;
 }
 
+function centeredTranslate(deltaX: number, deltaY: number): string {
+  return `calc(-50% + ${deltaX}px) calc(-50% + ${deltaY}px)`;
+}
+
 export function animateBlackjackChipPlan(
   root: HTMLElement,
   plan: BlackjackChipAnimationPlan,
@@ -246,7 +247,6 @@ export function animateBlackjackChipPlan(
   const blackjackRoot = root.querySelector<HTMLElement>(".bj-root");
   if (!blackjackRoot) return;
   const rootRect = blackjackRoot.getBoundingClientRect();
-
   blackjackRoot.classList.add("is-chip-animating");
 
   for (const step of plan.steps) {
@@ -255,8 +255,8 @@ export function animateBlackjackChipPlan(
     const denomination = denominationSource(root, step.chipValue);
     const genericSource = genericStakeSource(root);
 
-    let sourceElement: HTMLElement | null = null;
-    let targetElement: HTMLElement | null = null;
+    let sourceElement: HTMLElement | null;
+    let targetElement: HTMLElement | null;
 
     if (step.kind === "betIn") {
       sourceElement = denomination;
@@ -279,8 +279,8 @@ export function animateBlackjackChipPlan(
     const ghost = createGhost(blackjackRoot, step);
     const startX = source.x - rootRect.left;
     const startY = source.y - rootRect.top;
-    const endX = target.x - rootRect.left;
-    const endY = target.y - rootRect.top;
+    const deltaX = target.x - source.x;
+    const deltaY = target.y - source.y;
 
     ghost.style.left = `${startX}px`;
     ghost.style.top = `${startY}px`;
@@ -293,18 +293,18 @@ export function animateBlackjackChipPlan(
     const animation = ghost.animate(
       [
         {
-          translate: "-50% -50%",
+          translate: centeredTranslate(0, 0),
           scale: "0.82",
           opacity: 0.18,
         },
         {
-          translate: `${endX - startX - 1}px ${endY - startY - 8}px`,
+          translate: centeredTranslate(deltaX - 1, deltaY - 8),
           scale: "1.08",
           opacity: 1,
           offset: 0.82,
         },
         {
-          translate: `${endX - startX}px ${endY - startY}px`,
+          translate: centeredTranslate(deltaX, deltaY),
           scale: "1",
           opacity: 0.96,
         },
