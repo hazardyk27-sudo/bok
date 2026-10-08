@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   installRouletteBetAuthority,
+  joinRouletteAuthorityWriteBarrier,
   reserveRouletteExternalLatestMutation,
 } from "./betAuthority";
 import {
@@ -240,5 +241,46 @@ describe("roulette serialized authority queue", () => {
 
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(bootstrapMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not release the write barrier until both prior and fast mutations settle", async () => {
+    let resolvePrior!: () => void;
+    let resolveFast!: () => void;
+    const prior = new Promise<void>((resolve) => {
+      resolvePrior = resolve;
+    });
+    const fast = new Promise<void>((resolve) => {
+      resolveFast = resolve;
+    });
+
+    let barrierSettled = false;
+    const barrier = joinRouletteAuthorityWriteBarrier(
+      prior,
+      fast,
+    ).then(() => {
+      barrierSettled = true;
+    });
+
+    await Promise.resolve();
+    expect(barrierSettled).toBe(false);
+
+    resolveFast();
+    await Promise.resolve();
+    expect(barrierSettled).toBe(false);
+
+    resolvePrior();
+    await barrier;
+    expect(barrierSettled).toBe(true);
+  });
+
+  it("releases the write barrier after a failed fast mutation instead of deadlocking later actions", async () => {
+    await expect(
+      joinRouletteAuthorityWriteBarrier(
+        Promise.resolve(),
+        Promise.reject(
+          new Error("ROULETTE_FAST_DOUBLE_FAILED"),
+        ),
+      ),
+    ).resolves.toBeUndefined();
   });
 });
