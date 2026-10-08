@@ -7,6 +7,7 @@ import {
 import {
   clearRouletteExternalLatestMutationForTests,
   consumeMatchingRouletteExternalLatestMutation,
+  hasRouletteActiveExternalLatestMutation,
   registerRouletteExternalLatestMutation,
   releaseRouletteFailedExternalLatestMutation,
 } from "./latestMutationDeduper";
@@ -90,6 +91,59 @@ describe("roulette latest mutation deduper", () => {
         }],
       ),
     ).toBeNull();
+  });
+
+  it("tracks a consumed fast request as active until the network promise settles", async () => {
+    let resolveShared!: (
+      value: RouletteGlobalBetUpdateResponse,
+    ) => void;
+    const shared = new Promise<RouletteGlobalBetUpdateResponse>(
+      (resolve) => {
+        resolveShared = resolve;
+      },
+    );
+    const plan = [
+      { betId: "straight-25", amount: 10 },
+      { betId: "straight-25", amount: 10 },
+    ];
+
+    registerRouletteExternalLatestMutation(
+      "round-1",
+      plan,
+      shared,
+    );
+
+    expect(
+      hasRouletteActiveExternalLatestMutation(
+        "round-1",
+        [{ betId: "straight-25", amount: 20 }],
+      ),
+    ).toBe(true);
+
+    expect(
+      consumeMatchingRouletteExternalLatestMutation(
+        "round-1",
+        [{ betId: "straight-25", amount: 20 }],
+      ),
+    ).toBe(shared);
+
+    expect(
+      hasRouletteActiveExternalLatestMutation(
+        "round-1",
+        [{ betId: "straight-25", amount: 20 }],
+      ),
+    ).toBe(true);
+
+    resolveShared(response(20));
+    await shared;
+    await Promise.resolve();
+
+    expect(
+      hasRouletteActiveExternalLatestMutation(
+        "round-1",
+        [{ betId: "straight-25", amount: 20 }],
+      ),
+    ).toBe(false);
   });
 
   it("does not consume a latest request for a different round or wager topology", () => {
