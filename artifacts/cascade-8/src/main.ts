@@ -62,7 +62,7 @@ if (isWitchRoute) {
   const rouletteModule = await import("./roulette");
   rouletteModule.mountRoulette(app);
 } else if (isBlackjackRoute) {
-  const blackjackModule = await import("./blackjack/live");
+  const blackjackModule = await import("./blackjack/liveEnhanced");
   blackjackModule.mountBlackjackLive(app);
 } else if (isAccountRoute) {
   const accountModule = await import("./account");
