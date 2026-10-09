@@ -19,29 +19,33 @@
   cursor: default;
 }
 
-/* Real dealer cutout. This asset has a true alpha channel: no casino/photo box,
-   no feather mask. The table shell remains above the dealer zone so the lower
-   torso and arms tuck behind the rail like a seated croupier. */
-.bj-root[data-live-authority="server"] .bj-dealer-figure {
-  display: none;
-}
-
+/* Render the real dealer on the existing DOM node instead of a pseudo-element.
+   The transparent asset is therefore part of the actual stacking tree and the
+   table shell (z-index 10) naturally covers the lower torso like a seated croupier. */
 .bj-root[data-live-authority="server"] .bj-dealer-zone {
   overflow: visible;
 }
 
 .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
-  content: "";
-  position: absolute;
-  z-index: 1;
+  content: none;
+}
+
+.bj-root[data-live-authority="server"] .bj-dealer-figure {
+  display: block;
+  z-index: 2;
   left: 50%;
   bottom: -3%;
   width: clamp(360px, 27vw, 430px);
+  height: auto;
   aspect-ratio: 492 / 375;
   transform: translateX(-50%);
   pointer-events: none;
   background: url("./assets/dealer-person.webp") center bottom / contain no-repeat;
   filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.5)) saturate(0.96) contrast(1.02);
+}
+
+.bj-root[data-live-authority="server"] .bj-dealer-figure > * {
+  display: none;
 }
 
 .bj-root[data-live-authority="server"] .bj-chip-rack,
@@ -63,7 +67,7 @@
     max-width: 28ch;
   }
 
-  .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
+  .bj-root[data-live-authority="server"] .bj-dealer-figure {
     bottom: -1%;
     width: clamp(220px, 58vw, 270px);
     filter: drop-shadow(0 13px 18px rgba(0, 0, 0, 0.46)) saturate(0.96) contrast(1.02);
