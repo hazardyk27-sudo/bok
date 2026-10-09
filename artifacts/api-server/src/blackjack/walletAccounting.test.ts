@@ -127,7 +127,7 @@ describe("Blackjack wallet accounting", () => {
     });
   });
 
-  it("debits half the main wager for insurance and credits its 2:1 return", () => {
+  it("debits insurance immediately but credits its 2:1 return only when dealer is revealed", () => {
     const current = createBlackjackServerSession({
       createShoe: () => shoeWith([
         card("10", 0),
@@ -141,13 +141,22 @@ describe("Blackjack wallet accounting", () => {
       createRoundId: () => "round-insurance",
     });
     const insurance = action(1, "insurance");
-    const completed = transitionBlackjackServerSession(started, insurance);
+    const afterInsurance = transitionBlackjackServerSession(started, insurance);
 
-    expect(planBlackjackWalletMutation(started, completed, insurance)).toEqual({
+    expect(planBlackjackWalletMutation(started, afterInsurance, insurance)).toEqual({
       debitCents: 2_500,
       debitKind: "INSURANCE_DEBIT",
+      payoutCreditCents: 0,
+      netDeltaCents: -2_500,
+    });
+
+    const stand = action(2, "stand");
+    const completed = transitionBlackjackServerSession(afterInsurance, stand);
+    expect(planBlackjackWalletMutation(afterInsurance, completed, stand)).toEqual({
+      debitCents: 0,
+      debitKind: null,
       payoutCreditCents: 7_500,
-      netDeltaCents: 5_000,
+      netDeltaCents: 7_500,
     });
   });
 

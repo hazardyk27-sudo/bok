@@ -9,13 +9,15 @@ import {
  *
  * Blackjack has table/casino variations, so this manifest deliberately fixes
  * one coherent ruleset instead of relying on ambiguous "standard" defaults.
- * The selected profile is a six-deck American hole-card game with H17.
+ * The selected profile is a six-deck hole-card game with H17 and NO PEEK:
+ * the dealer's hole card exists from the initial deal but is not revealed or
+ * acted on until every playable player hand has finished.
  */
 export const BLACKJACK_CANONICAL_RULES = {
-  profile: "6-DECK AMERICAN H17",
+  profile: "6-DECK HOLE-CARD NO-PEEK H17",
   deckCount: 6,
   dealerHoleCard: true,
-  dealerPeeksForBlackjack: true,
+  dealerPeeksForBlackjack: false,
   dealerHitsSoft17: true,
   blackjackProfitPayout: 1.5,
   blackjackTotalReturnMultiplier: 2.5,
@@ -68,16 +70,16 @@ export function formatBlackjackRanksTotal(ranks: readonly BlackjackRank[]): stri
 }
 
 export const BLACKJACK_RULES_DISCLOSURE = [
-  "6 decks · American hole-card game",
+  "6 decks · hole card dealt but no dealer peek",
   "Ace is 11 unless that would bust the hand, then it becomes 1",
   "Dealer hits soft 17 (H17), stands on hard 17+ and soft 18+",
-  "Dealer peeks for Blackjack under the American hole-card rule",
+  "Dealer reveals/checks Blackjack only after all playable player hands finish",
   "Natural Blackjack (first 2 cards A + 10-value) pays 3:2",
   "Normal win pays 1:1 · push returns stake",
   "Double on any first 2 cards · one card only · double after split allowed",
   "Split equal-value cards · maximum 4 hands per seat",
   "Split Aces receive one card each · no hit or re-split Aces",
   "21 after split/hit/double is not a natural Blackjack and pays 1:1",
-  "Insurance only versus dealer Ace · up to 1/2 stake · pays 2:1",
+  "Insurance only versus dealer Ace · up to 1/2 stake · pays 2:1 at dealer reveal",
   "No surrender",
 ] as const;

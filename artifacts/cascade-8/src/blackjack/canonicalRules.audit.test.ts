@@ -60,11 +60,13 @@ function round(active: BlackjackRoundHand): BlackjackRoundState {
   };
 }
 
-describe("canonical 6-deck American H17 rules", () => {
-  it("locks shoe and table-shape constants", () => {
+describe("canonical 6-deck hole-card no-peek H17 rules", () => {
+  it("locks shoe, no-peek policy and table-shape constants", () => {
     expect(BLACKJACK_DECK_COUNT).toBe(BLACKJACK_CANONICAL_RULES.deckCount);
     expect(BLACKJACK_CUT_CARD_PENETRATION).toBe(BLACKJACK_CANONICAL_RULES.cutCardPenetration);
     expect(BLACKJACK_MAX_HANDS_PER_SEAT).toBe(BLACKJACK_CANONICAL_RULES.maxHandsPerSeat);
+    expect(BLACKJACK_CANONICAL_RULES.dealerHoleCard).toBe(true);
+    expect(BLACKJACK_CANONICAL_RULES.dealerPeeksForBlackjack).toBe(false);
   });
 
   it("uses the highest non-busting value as the hand total and labels soft hands", () => {
