@@ -108,6 +108,119 @@ function seatStateForDeal(seats: readonly BlackjackDealSeat[]): BlackjackSeatSta
   };
 }
 
+/**
+ * The core round engine knows the physical dealer hole card immediately because
+ * it owns the shoe. The live table policy is NO PEEK: a dealer natural must not
+ * end a playable player hand before that player has acted. If the core engine
+ * already settled a dealer natural, reopen only the still-playable hands and
+ * remove the early settlement values from the persisted/public state.
+ */
+function reopenDealerNaturalForNoPeek(round: BlackjackRoundState): BlackjackRoundState {
+  if (round.phase !== "complete" || !round.dealer.blackjack) {
+    return round;
+  }
+
+  const firstPlayableHand = round.hands.find((hand) => hand.status === "playing") ?? null;
+  if (!firstPlayableHand) {
+    return round;
+  }
+
+  return {
+    ...round,
+    phase: "playerTurns",
+    activeHandId: firstPlayableHand.handId,
+    activeSeatId: firstPlayableHand.seatId,
+    hands: round.hands.map((hand) => ({
+      ...hand,
+      result: null,
+      returnAmount: null,
+      netAmount: null,
+      insuranceReturnAmount:
+        hand.insuranceDecision === "taken" || hand.insuranceDecision === "declined"
+          ? null
+          : hand.insuranceReturnAmount,
+      insuranceNetAmount:
+        hand.insuranceDecision === "taken" || hand.insuranceDecision === "declined"
+          ? null
+          : hand.insuranceNetAmount,
+    })),
+  };
+}
+
+/** Insurance must not leak the dealer hole-card result during NO PEEK play. */
+function deferInsuranceSettlement(round: BlackjackRoundState): BlackjackRoundState {
+  if (round.phase === "complete") {
+    return round;
+  }
+
+  return {
+    ...round,
+    hands: round.hands.map((hand) =>
+      hand.insuranceDecision === "taken" || hand.insuranceDecision === "declined"
+        ? {
+            ...hand,
+            insuranceReturnAmount: null,
+            insuranceNetAmount: null,
+          }
+        : hand,
+    ),
+  };
+}
+
+/** Settle insurance only when the dealer hand is actually revealed. */
+function settleDeferredInsurance(round: BlackjackRoundState): BlackjackRoundState {
+  if (round.phase !== "complete") {
+    return round;
+  }
+
+  return {
+    ...round,
+    hands: round.hands.map((hand) => {
+      if (hand.insuranceDecision === "taken") {
+        const insuranceReturnAmount = round.dealer.blackjack
+          ? hand.insuranceWager * 3
+          : 0;
+        return {
+          ...hand,
+          insuranceReturnAmount,
+          insuranceNetAmount: insuranceReturnAmount - hand.insuranceWager,
+        };
+      }
+
+      if (hand.insuranceDecision === "declined") {
+        return {
+          ...hand,
+          insuranceReturnAmount: 0,
+          insuranceNetAmount: 0,
+        };
+      }
+
+      return hand;
+    }),
+  };
+}
+
+function applyCanonicalNoPeekPolicy(
+  round: BlackjackRoundState,
+  action: BlackjackServerActionName,
+): BlackjackRoundState {
+  let nextRound = round;
+
+  if (action === "deal" || action === "insurance" || action === "declineInsurance") {
+    nextRound = reopenDealerNaturalForNoPeek(nextRound);
+  }
+
+  if (action === "insurance" || action === "declineInsurance") {
+    nextRound = deferInsuranceSettlement(nextRound);
+  }
+
+  if (nextRound.phase === "complete") {
+    nextRound = settleDeferredInsurance(nextRound);
+  }
+
+  return nextRound;
+}
+
 export function allowedBlackjackServerActions(
   round: BlackjackRoundState | null,
 ): BlackjackServerActionName[] {
@@ -299,6 +412,10 @@ export function transitionBlackjackServerSession(
     }
     default:
       throw new Error("BLACKJACK_ACTION_NOT_ALLOWED");
+  }
+
+  if (round) {
+    round = applyCanonicalNoPeekPolicy(round, request.action);
   }
 
   return {
