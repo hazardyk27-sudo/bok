@@ -19,10 +19,9 @@
   cursor: default;
 }
 
-/* Real photographic dealer. Keep it on its own visual layer so the table rail
-   can occlude the torso naturally. The very tight elliptical feather removes
-   the old rectangular-photo look and lets the casino pixels dissolve into the
-   existing dark backdrop. */
+/* Real dealer cutout. This asset has a true alpha channel: no casino/photo box,
+   no feather mask. The table shell remains above the dealer zone so the lower
+   torso and arms tuck behind the rail like a seated croupier. */
 .bj-root[data-live-authority="server"] .bj-dealer-figure {
   display: none;
 }
@@ -36,32 +35,13 @@
   position: absolute;
   z-index: 1;
   left: 50%;
-  top: 0;
-  width: clamp(390px, 31vw, 470px);
-  height: clamp(255px, 34vh, 330px);
+  bottom: -3%;
+  width: clamp(360px, 27vw, 430px);
+  aspect-ratio: 492 / 375;
   transform: translateX(-50%);
   pointer-events: none;
-  background-image: url("./assets/dealer-game.webp");
-  background-repeat: no-repeat;
-  background-position: 50% 2%;
-  background-size: 100% auto;
-  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.52)) saturate(0.9) contrast(1.04) brightness(0.96);
-  -webkit-mask-image: radial-gradient(
-    ellipse 50% 84% at 50% 46%,
-    #000 0 46%,
-    rgba(0, 0, 0, 0.94) 55%,
-    rgba(0, 0, 0, 0.56) 64%,
-    rgba(0, 0, 0, 0.18) 71%,
-    transparent 78%
-  );
-  mask-image: radial-gradient(
-    ellipse 50% 84% at 50% 46%,
-    #000 0 46%,
-    rgba(0, 0, 0, 0.94) 55%,
-    rgba(0, 0, 0, 0.56) 64%,
-    rgba(0, 0, 0, 0.18) 71%,
-    transparent 78%
-  );
+  background: url("./assets/dealer-person.webp") center bottom / contain no-repeat;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.5)) saturate(0.96) contrast(1.02);
 }
 
 .bj-root[data-live-authority="server"] .bj-chip-rack,
@@ -84,28 +64,9 @@
   }
 
   .bj-root[data-live-authority="server"] .bj-dealer-zone::before {
-    top: 1.5%;
-    width: clamp(235px, 63vw, 290px);
-    height: clamp(178px, 25vh, 230px);
-    background-position: 50% 1%;
-    background-size: 100% auto;
-    filter: drop-shadow(0 13px 19px rgba(0, 0, 0, 0.5)) saturate(0.9) contrast(1.04) brightness(0.96);
-    -webkit-mask-image: radial-gradient(
-      ellipse 52% 85% at 50% 45%,
-      #000 0 47%,
-      rgba(0, 0, 0, 0.92) 57%,
-      rgba(0, 0, 0, 0.5) 66%,
-      rgba(0, 0, 0, 0.16) 73%,
-      transparent 80%
-    );
-    mask-image: radial-gradient(
-      ellipse 52% 85% at 50% 45%,
-      #000 0 47%,
-      rgba(0, 0, 0, 0.92) 57%,
-      rgba(0, 0, 0, 0.5) 66%,
-      rgba(0, 0, 0, 0.16) 73%,
-      transparent 80%
-    );
+    bottom: -1%;
+    width: clamp(220px, 58vw, 270px);
+    filter: drop-shadow(0 13px 18px rgba(0, 0, 0, 0.46)) saturate(0.96) contrast(1.02);
   }
 
   /* Mobile console is contextual: betting tools before DEAL, round actions after DEAL.
