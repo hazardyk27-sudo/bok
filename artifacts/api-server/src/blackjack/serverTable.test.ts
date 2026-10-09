@@ -101,6 +101,47 @@ describe("BlackjackServerTableStore", () => {
     expect(dealt.allowedActions).toContain("stand");
   });
 
+  it("does not reveal a dealer natural or end the round before a playable hand acts", () => {
+    // Exact live bug reproduction: player has 7+5=12, dealer shows K with hidden A.
+    const cards = [
+      card("7", 0),
+      card("K", 1, "hearts"),
+      card("5", 2, "clubs"),
+      card("A", 3, "diamonds"),
+      card("6", 4),
+    ];
+    const store = new BlackjackServerTableStore({
+      createShoe: () => shoeWith(cards),
+      createRoundId: () => "no-peek-round",
+    });
+
+    const dealt = store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 5, wager: 1000 }]),
+    );
+
+    expect(dealt.round?.phase).toBe("playerTurns");
+    expect(dealt.round?.activeSeatId).toBe(5);
+    expect(dealt.round?.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["7", "5"]);
+    expect(dealt.round?.dealer.cards[0]?.rank).toBe("K");
+    expect(dealt.round?.dealer.cards[1]).toBeNull();
+    expect(dealt.round?.dealer.blackjack).toBeNull();
+    expect(dealt.allowedActions).toEqual(expect.arrayContaining(["hit", "stand", "double"]));
+
+    const hit = store.applyAction("session-a", action(1, "hit"));
+    expect(hit.round?.phase).toBe("playerTurns");
+    expect(hit.round?.hands[0]?.cards.map((candidate) => candidate.rank)).toEqual(["7", "5", "6"]);
+    expect(hit.round?.dealer.cards[1]).toBeNull();
+    expect(hit.round?.dealer.blackjack).toBeNull();
+
+    const stood = store.applyAction("session-a", action(2, "stand"));
+    expect(stood.round?.phase).toBe("complete");
+    expect(stood.round?.dealer.cards[1]?.rank).toBe("A");
+    expect(stood.round?.dealer.blackjack).toBe(true);
+    expect(stood.round?.hands[0]).toMatchObject({ result: "lose", returnAmount: 0 });
+    expect(stood.allowedActions).toEqual(["next"]);
+  });
+
   it("rejects stale revisions instead of replaying an action", () => {
     const cards = [
       card("5", 0),
@@ -148,7 +189,7 @@ describe("BlackjackServerTableStore", () => {
     expect(store.getState("session-a").revision).toBe(2);
   });
 
-  it("keeps dealer blackjack secret until the insurance decision is finished", () => {
+  it("keeps dealer blackjack secret after insurance until the player hand finishes", () => {
     const cards = [
       card("10", 0),
       card("A", 1, "hearts"),
@@ -172,16 +213,28 @@ describe("BlackjackServerTableStore", () => {
 
     const insured = store.applyAction("session-a", action(1, "insurance"));
 
-    expect(insured.round?.phase).toBe("complete");
-    expect(insured.round?.dealer.cards[1]?.rank).toBe("K");
-    expect(insured.round?.dealer.blackjack).toBe(true);
+    expect(insured.round?.phase).toBe("playerTurns");
+    expect(insured.round?.dealer.cards[1]).toBeNull();
+    expect(insured.round?.dealer.blackjack).toBeNull();
     expect(insured.round?.hands[0]).toMatchObject({
+      insuranceWager: 25,
+      insuranceReturnAmount: null,
+      insuranceNetAmount: null,
+      result: null,
+    });
+    expect(insured.allowedActions).toEqual(expect.arrayContaining(["hit", "stand"]));
+
+    const settled = store.applyAction("session-a", action(2, "stand"));
+    expect(settled.round?.phase).toBe("complete");
+    expect(settled.round?.dealer.cards[1]?.rank).toBe("K");
+    expect(settled.round?.dealer.blackjack).toBe(true);
+    expect(settled.round?.hands[0]).toMatchObject({
       insuranceWager: 25,
       insuranceReturnAmount: 75,
       insuranceNetAmount: 50,
       result: "lose",
     });
-    expect(insured.allowedActions).toEqual(["next"]);
+    expect(settled.allowedActions).toEqual(["next"]);
   });
 
   it("has no configured table maximum while preserving numeric safety", () => {
